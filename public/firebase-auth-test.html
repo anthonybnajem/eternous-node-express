@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Firebase Auth Test</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: rgba(15, 23, 42, 0.88);
+        --panel-2: rgba(30, 41, 59, 0.92);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #22c55e;
+        --accent-2: #38bdf8;
+        --danger: #f87171;
+        --border: rgba(148, 163, 184, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(56, 189, 248, 0.2), transparent 30%),
+          radial-gradient(circle at top right, rgba(34, 197, 94, 0.18), transparent 26%),
+          linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      }
+
+      .wrap {
+        width: min(1200px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.6);
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+      }
+
+      .sub {
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 16px;
+      }
+
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--panel);
+        box-shadow: 0 24px 80px rgba(2, 6, 23, 0.35);
+        overflow: hidden;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .card-head {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.35), transparent);
+      }
+
+      .card-body {
+        padding: 20px;
+      }
+
+      label {
+        display: block;
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text);
+        padding: 12px 14px;
+        outline: none;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: rgba(56, 189, 248, 0.8);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+      }
+
+      textarea {
+        min-height: 180px;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      @media (max-width: 700px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .btns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      @media (max-width: 700px) {
+        .btns {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      button {
+        border: 0;
+        border-radius: 14px;
+        padding: 12px 16px;
+        color: #05111d;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s ease, opacity 0.15s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      .google {
+        background: linear-gradient(135deg, #ffffff, #dbeafe);
+      }
+
+      .facebook {
+        background: linear-gradient(135deg, #60a5fa, #1d4ed8);
+        color: white;
+      }
+
+      .apple {
+        background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+      }
+
+      .email {
+        background: linear-gradient(135deg, #34d399, #10b981);
+      }
+
+      .secondary {
+        background: rgba(148, 163, 184, 0.18);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .status {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--muted);
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 56px;
+      }
+
+      .status.error {
+        color: #fecaca;
+        border-color: rgba(248, 113, 113, 0.4);
+      }
+
+      .status.success {
+        color: #bbf7d0;
+        border-color: rgba(34, 197, 94, 0.4);
+      }
+
+      .hint {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .token-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      .token-actions button {
+        padding: 10px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <div class="eyebrow">Firebase auth test page</div>
+        <h1>Sign in with Google, Facebook, Apple, or email, then copy the Firebase ID token.</h1>
+        <p class="sub">
+          Use this page to test real Firebase login flows locally. Paste your Firebase web config, choose a provider,
+          sign in, then send the printed ID token to your backend.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="card-head">
+            <h2>Firebase Config</h2>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div>
+                <label for="apiKey">apiKey</label>
+                <input id="apiKey" placeholder="AIza..." />
+              </div>
+              <div>
+                <label for="authDomain">authDomain</label>
+                <input id="authDomain" placeholder="your-project.firebaseapp.com" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="projectId">projectId</label>
+                <input id="projectId" placeholder="your-project-id" />
+              </div>
+              <div>
+                <label for="appId">appId</label>
+                <input id="appId" placeholder="1:123:web:abc123" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="messagingSenderId">messagingSenderId</label>
+                <input id="messagingSenderId" placeholder="1234567890" />
+              </div>
+              <div>
+                <label for="measurementId">measurementId</label>
+                <input id="measurementId" placeholder="G-XXXXXXXXXX" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="email">Email</label>
+                <input id="email" placeholder="user@example.com" />
+              </div>
+              <div>
+                <label for="password">Password</label>
+                <input id="password" type="password" placeholder="password for email provider test" />
+              </div>
+            </div>
+
+            <div class="hint">
+              For Google/Facebook/Apple, make sure the provider is enabled in Firebase Console and your localhost
+              domain is authorized.
+            </div>
+
+            <div class="btns">
+              <button class="google" id="googleBtn">Sign in with Google</button>
+              <button class="facebook" id="facebookBtn">Sign in with Facebook</button>
+              <button class="apple" id="appleBtn">Sign in with Apple</button>
+              <button class="email" id="emailBtn">Sign in with Email</button>
+            </div>
+
+            <div class="token-actions">
+              <button class="secondary" id="copyTokenBtn" type="button">Copy Token</button>
+              <button class="secondary" id="clearBtn" type="button">Clear</button>
+            </div>
+            <div id="status" class="status">Ready.</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Firebase ID Token</h2>
+          </div>
+          <div class="card-body">
+            <label for="token">Latest token</label>
+            <textarea id="token" readonly placeholder="Sign in to generate a Firebase ID token..."></textarea>
+            <div class="hint">
+              Send this token to your backend with `POST /api/v1/auth/login` or `POST /api/v1/auth/register`.
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/firebase-config.js"></script>
+    <script type="module">
+      import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+      import {
+        getAuth,
+        GoogleAuthProvider,
+        FacebookAuthProvider,
+        OAuthProvider,
+        signInWithPopup,
+        signInWithEmailAndPassword,
+      } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+
+      const configFields = ['apiKey', 'authDomain', 'projectId', 'appId', 'messagingSenderId', 'measurementId'];
+      const statusEl = document.getElementById('status');
+      const tokenEl = document.getElementById('token');
+      const googleBtn = document.getElementById('googleBtn');
+      const facebookBtn = document.getElementById('facebookBtn');
+      const appleBtn = document.getElementById('appleBtn');
+      const emailBtn = document.getElementById('emailBtn');
+      const copyTokenBtn = document.getElementById('copyTokenBtn');
+      const clearBtn = document.getElementById('clearBtn');
+
+      const setStatus = (message, kind = 'info') => {
+        statusEl.textContent = message;
+        statusEl.classList.remove('error', 'success');
+        if (kind === 'error') {
+          statusEl.classList.add('error');
+        }
+        if (kind === 'success') {
+          statusEl.classList.add('success');
+        }
+      };
+
+      const getConfig = () => {
+        const envConfig = window.FIREBASE_WEB_CONFIG || {};
+        const hasEnvConfig = envConfig.apiKey && envConfig.authDomain && envConfig.projectId && envConfig.appId;
+        if (hasEnvConfig) {
+          for (const field of configFields) {
+            const input = document.getElementById(field);
+            if (envConfig[field] && !input.value.trim()) {
+              input.value = envConfig[field];
+            }
+          }
+          return envConfig;
+        }
+
+        const config = {};
+        for (const field of configFields) {
+          const value = document.getElementById(field).value.trim();
+          if (value) {
+            config[field] = value;
+          }
+        }
+
+        if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId) {
+          throw new Error('Fill at least apiKey, authDomain, projectId, and appId, or set FIREBASE_WEB_* in .env.');
+        }
+
+        return config;
+      };
+
+      const getFirebaseAuth = () => {
+        const config = getConfig();
+        const app = getApps().length ? getApps()[0] : initializeApp(config);
+        return getAuth(app);
+      };
+
+      const writeToken = async (token) => {
+        tokenEl.value = token;
+        await navigator.clipboard.writeText(token).catch(() => {});
+        setStatus('Firebase ID token generated and copied to clipboard.', 'success');
+      };
+
+      const signInWithProvider = async (provider) => {
+        try {
+          setStatus('Opening provider popup...');
+          const auth = getFirebaseAuth();
+          const result = await signInWithPopup(auth, provider);
+          const token = await result.user.getIdToken();
+          await writeToken(token);
+        } catch (error) {
+          console.error(error);
+          setStatus(error?.message || String(error), 'error');
+        }
+      };
+
+      googleBtn.addEventListener('click', () => {
+        signInWithProvider(new GoogleAuthProvider());
+      });
+
+      facebookBtn.addEventListener('click', () => {
+        signInWithProvider(new FacebookAuthProvider());
+      });
+
+      appleBtn.addEventListener('click', () => {
+        signInWithProvider(new OAuthProvider('apple.com'));
+      });
+
+      emailBtn.addEventListener('click', async () => {
+        try {
+          const email = document.getElementById('email').value.trim();
+          const password = document.getElementById('password').value;
+          if (!email || !password) {
+            throw new Error('Fill email and password first.');
+          }
+
+          const auth = getFirebaseAuth();
+          const result = await signInWithEmailAndPassword(auth, email, password);
+          const token = await result.user.getIdToken();
+          await writeToken(token);
+        } catch (error) {
+          console.error(error);
+          setStatus(error?.message || String(error), 'error');
+        }
+      });
+
+      copyTokenBtn.addEventListener('click', async () => {
+        if (!tokenEl.value) {
+          setStatus('No token to copy yet.', 'error');
+          return;
+        }
+
+        await navigator.clipboard.writeText(tokenEl.value).catch(() => {});
+        setStatus('Token copied to clipboard.', 'success');
+      });
+
+      clearBtn.addEventListener('click', () => {
+        tokenEl.value = '';
+        setStatus('Cleared.', 'info');
+      });
+    </script>
+  </body>
+</html>
