@@ -1,7 +1,7 @@
 import type { Job } from 'bull';
-import { notificationQueue, processWithMetrics, type NotificationJobData } from '../index.js';
-import { sendPushNotification } from '../../services/notifications/fcm.service.js';
-import logger from '../../config/logger.js';
+import { notificationQueue, processWithMetrics, type NotificationJobData } from '../index';
+import { sendPushNotification } from '../../services/notifications/fcm.service';
+import logger from '../../config/logger';
 
 const processNotificationJob = async (job: Job<NotificationJobData>): Promise<void> => {
   const { token, title, body, data } = job.data;

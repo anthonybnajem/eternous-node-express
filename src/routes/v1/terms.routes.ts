@@ -1,6 +1,6 @@
 import express from 'express';
-import { termsController } from '../../controllers/index.js';
-import auth from '../../middlewares/auth.js';
+import { termsController } from '../../controllers/index';
+import auth from '../../middlewares/auth';
 
 const router = express.Router();
 

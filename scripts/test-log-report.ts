@@ -12,10 +12,10 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '..', '.env.test') });
 
-import { generateLogSummary, getSystemMetrics } from '../src/services/logReport.service.js';
-import { generateEmailTemplate } from '../src/services/emailReport.service.js';
-import { getSchedulerStatus, getAvailableSchedules } from '../src/config/scheduler.js';
-import config from '../src/config/config.js';
+import { generateLogSummary, getSystemMetrics } from '../src/services/logReport.service';
+import { generateEmailTemplate } from '../src/services/emailReport.service';
+import { getSchedulerStatus, getAvailableSchedules } from '../src/config/scheduler';
+import config from '../src/config/config';
 
 console.log('🧪 Testing Log Reporting System\n');
 console.log('='.repeat(50));

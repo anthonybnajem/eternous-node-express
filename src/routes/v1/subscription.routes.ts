@@ -1,8 +1,8 @@
 import express from 'express';
-import auth from '../../middlewares/auth.js';
-import validate from '../../middlewares/validate.js';
-import { subscriptionController } from '../../controllers/index.js';
-import { subscriptionValidation } from '../../validations/index.js';
+import auth from '../../middlewares/auth';
+import validate from '../../middlewares/validate';
+import { subscriptionController } from '../../controllers/index';
+import { subscriptionValidation } from '../../validations/index';
 
 const router = express.Router();
 

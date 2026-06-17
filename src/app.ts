@@ -6,15 +6,15 @@ import compression from 'compression';
 import cors from 'cors';
 import passport from 'passport';
 import httpStatus from 'http-status';
-import config from './config/config.js';
-import { successHandler, errorHandler } from './config/morgan.js';
-import { jwtStrategy } from './config/passport.js';
-import authLimiter from './middlewares/rateLimiter.js';
-import routes from './routes/v1/index.js';
-import { errorConverter, errorHandler as errorHandlerMiddleware } from './middlewares/error.js';
-import ApiError from './utils/ApiError.js';
-import { setupSwagger } from './config/swagger.js';
-import { metricsMiddleware, register } from './config/metrics.js';
+import config from './config/config';
+import { successHandler, errorHandler } from './config/morgan';
+import { jwtStrategy } from './config/passport';
+import authLimiter from './middlewares/rateLimiter';
+import routes from './routes/v1/index';
+import { errorConverter, errorHandler as errorHandlerMiddleware } from './middlewares/error';
+import ApiError from './utils/ApiError';
+import { setupSwagger } from './config/swagger';
+import { metricsMiddleware, register } from './config/metrics';
 
 const app = express();
 
@@ -30,7 +30,7 @@ app.use(metricsMiddleware);
 // Static files
 app.use(express.static('public'));
 
-app.get('/firebase-config.js', (_req: Request, res: Response): void => {
+app.get('/firebase-config', (_req: Request, res: Response): void => {
   const firebaseWebConfig = {
     apiKey: config.firebase.web.apiKey,
     authDomain: config.firebase.web.authDomain,
@@ -110,7 +110,7 @@ app.use('/api/v1', routes);
 // Root endpoint
 app.get('/', (_req: Request, res: Response): void => {
   res.json({
-    message: 'Node.js Backend Template API',
+    message: 'Node Backend Template API',
     version: '1.0.0',
     documentation: '/api-docs',
     health: '/health',

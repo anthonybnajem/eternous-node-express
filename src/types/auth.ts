@@ -1,5 +1,5 @@
-import type { ObjectIdLike } from './common.js';
-import type { UserDocument } from '../models/user.model.js';
+import type { ObjectIdLike } from './common';
+import type { UserDocument } from '../models/user.model';
 
 export interface RegisterBody {
   fullName?: string;

@@ -1,5 +1,5 @@
-import { About } from '../models/index.js';
-import type { AboutAttrs, AboutDocument } from '../models/about.model.js';
+import { About } from '../models/index';
+import type { AboutAttrs, AboutDocument } from '../models/about.model';
 
 const createAbout = async (aboutBody: AboutAttrs): Promise<AboutDocument> => {
   const existingAbout = await About.findOne();

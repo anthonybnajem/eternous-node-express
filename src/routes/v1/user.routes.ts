@@ -1,8 +1,8 @@
 import express from 'express';
-import auth from '../../middlewares/auth.js';
-import userController from '../../controllers/user.controller.js';
-import userFileUploadMiddleware from '../../middlewares/fileUpload.js';
-import convertHeicToPngMiddleware from '../../middlewares/converter.js';
+import auth from '../../middlewares/auth';
+import userController from '../../controllers/user.controller';
+import userFileUploadMiddleware from '../../middlewares/fileUpload';
+import convertHeicToPngMiddleware from '../../middlewares/converter';
 
 const UPLOADS_FOLDER_USERS = './public/uploads/users';
 const uploadUsers = userFileUploadMiddleware(UPLOADS_FOLDER_USERS);

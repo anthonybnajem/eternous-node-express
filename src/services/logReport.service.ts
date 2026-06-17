@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import moment from 'moment';
-import logger from '../config/logger.js';
+import logger from '../config/logger';
 
 export interface LogRecord {
   timestamp?: string;

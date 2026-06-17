@@ -1,7 +1,7 @@
 import httpStatus from 'http-status';
-import { SubscriptionPlan } from '../models/index.js';
-import type { SubscriptionPlanAttrs, SubscriptionPlanDocument } from '../models/subscriptionPlan.model.js';
-import ApiError from '../utils/ApiError.js';
+import { SubscriptionPlan } from '../models/index';
+import type { SubscriptionPlanAttrs, SubscriptionPlanDocument } from '../models/subscriptionPlan.model';
+import ApiError from '../utils/ApiError';
 
 export interface CreateSubscriptionPlanBody extends SubscriptionPlanAttrs {}
 export interface UpdateSubscriptionPlanBody extends Partial<SubscriptionPlanAttrs> {}

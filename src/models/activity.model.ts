@@ -1,6 +1,6 @@
 import mongoose, { type HydratedDocument, type Model, type Types } from 'mongoose';
-import { toJSON, paginate } from './plugins/index.js';
-import type { PaginateModel } from '../types/common.js';
+import { toJSON, paginate } from './plugins/index';
+import type { PaginateModel } from '../types/common';
 
 export type ActivityType = 'login' | 'logout' | 'register' | 'update_profile' | 'password_change' | 'order_placed' | 'payment' | 'other';
 

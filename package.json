@@ -1,12 +1,12 @@
 {
   "name": "nodejs-backend-boilerplate",
   "version": "1.0.0",
-  "description": "Professional, universal, production-ready Node.js backend boilerplate",
-  "main": "dist/src/index.js",
+  "description": "Professional, universal, production-ready Node backend boilerplate",
+  "main": "dist/src/index",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node dist/src/index.js",
+    "start": "node dist/src/index",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "lint": "eslint src tests scripts commitlint.config.ts jest.config.ts migrate-mongo-config.ts --ext .ts --fix",
@@ -19,9 +19,9 @@
     "test:log-report": "tsx scripts/test-log-report.ts",
     "test:email-report": "tsx scripts/test-email-report.ts",
     "test:scheduler": "tsx scripts/test-scheduler.ts",
-    "migrate:up": "tsx ./node_modules/migrate-mongo/bin/migrate-mongo.js -f migrate-mongo-config.ts up",
-    "migrate:down": "tsx ./node_modules/migrate-mongo/bin/migrate-mongo.js -f migrate-mongo-config.ts down",
-    "migrate:create": "tsx ./node_modules/migrate-mongo/bin/migrate-mongo.js -f migrate-mongo-config.ts create",
+    "migrate:up": "tsx ./node_modules/migrate-mongo/bin/migrate-mongo -f migrate-mongo-config.ts up",
+    "migrate:down": "tsx ./node_modules/migrate-mongo/bin/migrate-mongo -f migrate-mongo-config.ts down",
+    "migrate:create": "tsx ./node_modules/migrate-mongo/bin/migrate-mongo -f migrate-mongo-config.ts create",
     "prepare": "husky install",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"

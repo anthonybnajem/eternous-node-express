@@ -1,10 +1,10 @@
 import type Stripe from 'stripe';
 import httpStatus from 'http-status';
 import type { Types } from 'mongoose';
-import { Subscription, User } from '../models/index.js';
-import type { SubscriptionDocument, SubscriptionProvider, SubscriptionStatus } from '../models/subscription.model.js';
-import ApiError from '../utils/ApiError.js';
-import type { ObjectIdLike } from '../types/common.js';
+import { Subscription, User } from '../models/index';
+import type { SubscriptionDocument, SubscriptionProvider, SubscriptionStatus } from '../models/subscription.model';
+import ApiError from '../utils/ApiError';
+import type { ObjectIdLike } from '../types/common';
 
 export interface CreateSubscriptionBody {
   user: ObjectIdLike;

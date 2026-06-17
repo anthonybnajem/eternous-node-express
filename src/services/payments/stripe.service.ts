@@ -1,9 +1,9 @@
 import Stripe from 'stripe';
 import httpStatus from 'http-status';
-import config from '../../config/config.js';
-import logger from '../../config/logger.js';
-import ApiError from '../../utils/ApiError.js';
-import subscriptionService from '../subscription.service.js';
+import config from '../../config/config';
+import logger from '../../config/logger';
+import ApiError from '../../utils/ApiError';
+import subscriptionService from '../subscription.service';
 
 const stripe = new Stripe(config.stripe.secretKey);
 

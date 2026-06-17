@@ -2,15 +2,15 @@ import jwt from 'jsonwebtoken';
 import moment, { type Moment } from 'moment';
 import { randomUUID } from 'crypto';
 import httpStatus from 'http-status';
-import config from '../config/config.js';
-import * as userService from './user.service.js';
-import { Token } from '../models/index.js';
-import type { TokenDocument, TokenType } from '../models/token.model.js';
-import type { UserDocument } from '../models/user.model.js';
-import ApiError from '../utils/ApiError.js';
-import { tokenTypes } from '../config/tokens.js';
-import type { AuthTokenPayload, AuthTokens } from '../types/auth.js';
-import type { ObjectIdLike } from '../types/common.js';
+import config from '../config/config';
+import * as userService from './user.service';
+import { Token } from '../models/index';
+import type { TokenDocument, TokenType } from '../models/token.model';
+import type { UserDocument } from '../models/user.model';
+import ApiError from '../utils/ApiError';
+import { tokenTypes } from '../config/tokens';
+import type { AuthTokenPayload, AuthTokens } from '../types/auth';
+import type { ObjectIdLike } from '../types/common';
 
 const generateToken = (
   activityId: ObjectIdLike | undefined,

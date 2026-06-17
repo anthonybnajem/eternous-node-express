@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import config from '../src/config/config.js';
-import logger from '../src/config/logger.js';
-import User from '../src/models/user.model.js';
-import { upsertFirebaseSeedUser } from '../src/services/firebaseAuth.service.js';
+import config from '../src/config/config';
+import logger from '../src/config/logger';
+import User from '../src/models/user.model';
+import { upsertFirebaseSeedUser } from '../src/services/firebaseAuth.service';
 
 const toFirebasePhotoURL = (value?: string): string | null => {
   if (!value) {

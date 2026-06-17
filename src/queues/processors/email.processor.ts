@@ -1,7 +1,7 @@
 import type { Job } from 'bull';
-import { emailQueue, processWithMetrics, type EmailJobData } from '../index.js';
-import { sendEmail } from '../../services/notifications/email.service.js';
-import logger from '../../config/logger.js';
+import { emailQueue, processWithMetrics, type EmailJobData } from '../index';
+import { sendEmail } from '../../services/notifications/email.service';
+import logger from '../../config/logger';
 
 const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => {
   const { to, subject, text, html } = job.data;

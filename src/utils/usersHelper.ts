@@ -1,5 +1,5 @@
-import type { ObjectIdLike } from '../types/common.js';
-import User, { type UserDocument } from '../models/user.model.js';
+import type { ObjectIdLike } from '../types/common';
+import User, { type UserDocument } from '../models/user.model';
 
 type UserStatusCallback = (user: UserDocument | null, error?: unknown) => void;
 

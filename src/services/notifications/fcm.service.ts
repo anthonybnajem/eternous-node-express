@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
-import initializeFirebaseApp from '../../config/firebase.js';
-import logger from '../../config/logger.js';
+import initializeFirebaseApp from '../../config/firebase';
+import logger from '../../config/logger';
 
 export interface PushNotificationPayload {
   title: string;

@@ -1,9 +1,9 @@
 import moment from 'moment';
-import { sendEmail } from './email.service.js';
-import { generateLogSummary } from './logReport.service.js';
-import logger from '../config/logger.js';
-import config from '../config/config.js';
-import type { AggregatedLogReport, LogRecord } from './logReport.service.js';
+import { sendEmail } from './email.service';
+import { generateLogSummary } from './logReport.service';
+import logger from '../config/logger';
+import config from '../config/config';
+import type { AggregatedLogReport, LogRecord } from './logReport.service';
 
 type ReportHealthStatus = 'HEALTHY' | 'ATTENTION' | 'WARNING' | 'CRITICAL';
 
@@ -202,7 +202,7 @@ const generateEmailTemplate = (data: EmailReportData): string => {
     <!-- Header -->
     <div class="header">
       <h1>📊 System Log Report</h1>
-      <p>${config.name || 'Node.js Backend Boilerplate'}</p>
+      <p>${config.name || 'Node Backend Boilerplate'}</p>
       <p>Period: ${period.from} to ${period.to} (${period.days} days)</p>
     </div>
 

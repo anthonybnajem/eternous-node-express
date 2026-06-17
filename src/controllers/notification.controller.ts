@@ -1,8 +1,8 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync.js';
-import * as fcmService from '../services/notifications/fcm.service.js';
-import { addEmailJob } from '../queues/index.js';
+import catchAsync from '../utils/catchAsync';
+import * as fcmService from '../services/notifications/fcm.service';
+import { addEmailJob } from '../queues/index';
 
 type EmailBody = { to: string; subject: string; text?: string; html?: string };
 type PushBody = { token: string; title: string; body: string; data?: Record<string, string> };

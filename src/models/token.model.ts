@@ -1,6 +1,6 @@
 import mongoose, { type HydratedDocument, type Types } from 'mongoose';
-import { toJSON } from './plugins/index.js';
-import { tokenTypes } from '../config/tokens.js';
+import { toJSON } from './plugins/index';
+import { tokenTypes } from '../config/tokens';
 
 export type TokenType = (typeof tokenTypes)[keyof typeof tokenTypes];
 

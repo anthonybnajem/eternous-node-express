@@ -1,11 +1,11 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
 import type Stripe from 'stripe';
-import catchAsync from '../utils/catchAsync.js';
-import * as stripeService from '../services/payments/stripe.service.js';
-import logger from '../config/logger.js';
-import { Activity } from '../models/index.js';
-import type { ActivityType } from '../models/activity.model.js';
+import catchAsync from '../utils/catchAsync';
+import * as stripeService from '../services/payments/stripe.service';
+import logger from '../config/logger';
+import { Activity } from '../models/index';
+import type { ActivityType } from '../models/activity.model';
 import type { Request } from 'express';
 
 type PaymentIntentBody = { amount: number; currency?: string; metadata?: Record<string, string> };

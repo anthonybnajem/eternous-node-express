@@ -1,8 +1,8 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync.js';
-import { Activity } from '../models/index.js';
-import pick from '../utils/pick.js';
+import catchAsync from '../utils/catchAsync';
+import { Activity } from '../models/index';
+import pick from '../utils/pick';
 
 type IdParams = { id: string };
 type ActivityQuery = Record<string, string | undefined>;

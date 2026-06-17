@@ -1,8 +1,8 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import Joi from 'joi';
 import httpStatus from 'http-status';
-import pick from '../utils/pick.js';
-import ApiError from '../utils/ApiError.js';
+import pick from '../utils/pick';
+import ApiError from '../utils/ApiError';
 
 type ValidationSchema = Partial<Record<'params' | 'query' | 'body', Joi.Schema | Record<string, unknown>>>;
 

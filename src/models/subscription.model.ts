@@ -1,5 +1,5 @@
 import mongoose, { type HydratedDocument, type Model, type Types } from 'mongoose';
-import { toJSON } from './plugins/index.js';
+import { toJSON } from './plugins/index';
 
 export type SubscriptionStatus = 'active' | 'trial' | 'inactive' | 'past_due' | 'canceled' | 'unpaid';
 export type SubscriptionProvider = 'stripe' | 'paypal' | 'manual';

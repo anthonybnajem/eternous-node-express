@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync.js';
-import ApiError from '../utils/ApiError.js';
-import response from '../config/response.js';
-import logger from '../config/logger.js';
-import { authService, userService, tokenService, emailService } from '../services/index.js';
-import { deleteFirebaseUser, syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service.js';
-import { Activity } from '../models/index.js';
-import type { ActivityType } from '../models/activity.model.js';
+import catchAsync from '../utils/catchAsync';
+import ApiError from '../utils/ApiError';
+import response from '../config/response';
+import logger from '../config/logger';
+import { authService, userService, tokenService, emailService } from '../services/index';
+import { deleteFirebaseUser, syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service';
+import { Activity } from '../models/index';
+import type { ActivityType } from '../models/activity.model';
 import type {
   ChangePasswordBody,
   DeleteMeBody,
@@ -16,7 +16,7 @@ import type {
   RegisterBody,
   ResetPasswordBody,
   VerifyEmailBody,
-} from '../types/auth.js';
+} from '../types/auth';
 
 type EmptyParams = Record<string, never>;
 type EmptyQuery = Record<string, never>;

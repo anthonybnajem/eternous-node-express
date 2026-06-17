@@ -341,9 +341,9 @@
       </section>
     </main>
 
-    <script src="/firebase-config.js"></script>
+    <script src="/firebase-config"></script>
     <script type="module">
-      import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+      import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app';
       import {
         getAuth,
         GoogleAuthProvider,
@@ -351,7 +351,7 @@
         OAuthProvider,
         signInWithPopup,
         signInWithEmailAndPassword,
-      } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+      } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth';
 
       const configFields = ['apiKey', 'authDomain', 'projectId', 'appId', 'messagingSenderId', 'measurementId'];
       const statusEl = document.getElementById('status');

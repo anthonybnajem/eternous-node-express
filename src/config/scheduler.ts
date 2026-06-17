@@ -2,9 +2,9 @@ import cron, { type ScheduledTask } from 'node-cron';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import logger from './logger.js';
-import config from './config.js';
-import { sendBulkLogReports } from '../services/emailReport.service.js';
+import logger from './logger';
+import config from './config';
+import { sendBulkLogReports } from '../services/emailReport.service';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

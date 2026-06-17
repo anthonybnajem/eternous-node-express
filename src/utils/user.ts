@@ -1,7 +1,7 @@
 import type { Request } from 'express';
 import httpStatus from 'http-status';
-import ApiError from './ApiError.js';
-import type { UserDocument } from '../models/user.model.js';
+import ApiError from './ApiError';
+import type { UserDocument } from '../models/user.model';
 
 const requireUser = (req: Request): UserDocument => {
   if (!req.user) {

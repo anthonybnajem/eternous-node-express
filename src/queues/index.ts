@@ -1,7 +1,7 @@
 import Queue, { type Job } from 'bull';
-import config from '../config/config.js';
-import logger from '../config/logger.js';
-import { jobProcessingDuration } from '../config/metrics.js';
+import config from '../config/config';
+import logger from '../config/logger';
+import { jobProcessingDuration } from '../config/metrics';
 
 export interface EmailJobData {
   to: string;

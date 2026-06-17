@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import { password } from './custom.validation.js';
+import { password } from './custom.validation';
 
 const firebaseRegister = Joi.object().keys({
   idToken: Joi.string().required(),

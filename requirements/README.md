@@ -12,7 +12,7 @@ This folder is the canonical place for project requirements, setup prerequisites
 
 The app currently depends on:
 
-- Node.js 18+
+- Node 18+
 - MongoDB
 - Redis
 - Firebase project access for Firebase auth and notifications

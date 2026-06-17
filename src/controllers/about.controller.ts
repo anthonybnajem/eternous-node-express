@@ -1,9 +1,9 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync.js';
-import response from '../config/response.js';
-import { aboutService } from '../services/index.js';
-import type { AboutAttrs } from '../models/about.model.js';
+import catchAsync from '../utils/catchAsync';
+import response from '../config/response';
+import { aboutService } from '../services/index';
+import type { AboutAttrs } from '../models/about.model';
 
 const createAbout = catchAsync<Record<string, never>, unknown, AboutAttrs>(async (req, res: Response): Promise<void> => {
   const about = await aboutService.createAbout(req.body);

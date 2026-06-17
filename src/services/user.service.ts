@@ -1,10 +1,10 @@
 import httpStatus from 'http-status';
 import type { FilterQuery } from 'mongoose';
-import { User } from '../models/index.js';
-import type { UserAttrs, UserDocument } from '../models/user.model.js';
-import ApiError from '../utils/ApiError.js';
-import { sendEmailVerification } from './email.service.js';
-import type { AnyRecord, ObjectIdLike, PaginationOptions, UploadedFileInfo } from '../types/common.js';
+import { User } from '../models/index';
+import type { UserAttrs, UserDocument } from '../models/user.model';
+import ApiError from '../utils/ApiError';
+import { sendEmailVerification } from './email.service';
+import type { AnyRecord, ObjectIdLike, PaginationOptions, UploadedFileInfo } from '../types/common';
 
 export type UserCreateBody = Partial<UserAttrs> & Pick<UserAttrs, 'email'>;
 export type UserUpdateBody = Partial<UserAttrs>;

@@ -1,9 +1,9 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync.js';
-import response from '../config/response.js';
-import { privacyService } from '../services/index.js';
-import type { PrivacyAttrs } from '../models/privacy.model.js';
+import catchAsync from '../utils/catchAsync';
+import response from '../config/response';
+import { privacyService } from '../services/index';
+import type { PrivacyAttrs } from '../models/privacy.model';
 
 const createPrivacy = catchAsync<Record<string, never>, unknown, PrivacyAttrs>(async (req, res: Response): Promise<void> => {
   const privacy = await privacyService.createPrivacy(req.body);

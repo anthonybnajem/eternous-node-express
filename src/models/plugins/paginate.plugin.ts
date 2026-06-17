@@ -1,5 +1,5 @@
 import type { Query, Schema } from 'mongoose';
-import type { AnyRecord, PaginatedResult, PaginationOptions } from '../../types/common.js';
+import type { AnyRecord, PaginatedResult, PaginationOptions } from '../../types/common';
 
 const paginate = <T>(schema: Schema<T>): void => {
   schema.statics.paginate = async function (filter: AnyRecord, options: PaginationOptions): Promise<PaginatedResult<T>> {

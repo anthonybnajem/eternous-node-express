@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Log Report - Node.js Backend Boilerplate</title>
+    <title>Log Report - Node Backend Boilerplate</title>
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -155,7 +155,7 @@
       <!-- Header -->
       <div class="header">
         <h1>📊 System Log Report</h1>
-        <p>Node.js Backend Boilerplate</p>
+        <p>Node Backend Boilerplate</p>
         <p>Period: 2025-10-26 to 2025-11-02 (7 days)</p>
       </div>
 
@@ -196,8 +196,8 @@
             <div class="log-message">Database connection timeout</div>
             <div style="margin-top: 5px; font-size: 11px; color: #991b1b; font-family: monospace">
               Error: Database connection timeout at MongoClient.connect
-              (/app/node_modules/mongodb/lib/mongo_client.js:123:45) at Database.connect
-              (/app/src/config/database.js:15:30)...
+              (/app/node_modules/mongodb/lib/mongo_client:123:45) at Database.connect
+              (/app/src/config/database:15:30)...
             </div>
           </div>
 
@@ -206,7 +206,7 @@
             <div class="log-message">Payment processing failed</div>
             <div style="margin-top: 5px; font-size: 11px; color: #991b1b; font-family: monospace">
               Error: Payment processing failed at StripeService.processPayment
-              (/app/src/services/payments/stripe.service.js:67:12) at PaymentController.createPayment
+              (/app/src/services/payments/stripe.service:67:12) at PaymentController.createPayment
               (/app/src/controllers/payment.controlle...
             </div>
           </div>
@@ -215,8 +215,8 @@
             <div class="log-timestamp">2025-11-01 16:55:00</div>
             <div class="log-message">Failed to upload file to S3</div>
             <div style="margin-top: 5px; font-size: 11px; color: #991b1b; font-family: monospace">
-              Error: Failed to upload file to S3 at S3.upload (/app/node_modules/aws-sdk/lib/services/s3.js:456:23) at
-              FileUpload.uploadToS3 (/app/src/middlewares/fileUpload.js:89:34)...
+              Error: Failed to upload file to S3 at S3.upload (/app/node_modules/aws-sdk/lib/services/s3:456:23) at
+              FileUpload.uploadToS3 (/app/src/middlewares/fileUpload:89:34)...
             </div>
           </div>
 
@@ -224,8 +224,8 @@
             <div class="log-timestamp">2025-11-01 17:10:00</div>
             <div class="log-message">Invalid JWT token provided</div>
             <div style="margin-top: 5px; font-size: 11px; color: #991b1b; font-family: monospace">
-              Error: Invalid JWT token at jwt.verify (/app/node_modules/jsonwebtoken/index.js:123:45) at
-              AuthMiddleware.verifyToken (/app/src/middlewares/auth.js:34:12)...
+              Error: Invalid JWT token at jwt.verify (/app/node_modules/jsonwebtoken/index:123:45) at
+              AuthMiddleware.verifyToken (/app/src/middlewares/auth:34:12)...
             </div>
           </div>
 
@@ -234,8 +234,8 @@
             <div class="log-message">Email service unavailable</div>
             <div style="margin-top: 5px; font-size: 11px; color: #991b1b; font-family: monospace">
               Error: Email service unavailable at Nodemailer.sendMail
-              (/app/node_modules/nodemailer/lib/mailer/index.js:234:56) at EmailService.sendEmail
-              (/app/src/services/email.service.js:45:23)...
+              (/app/node_modules/nodemailer/lib/mailer/index:234:56) at EmailService.sendEmail
+              (/app/src/services/email.service:45:23)...
             </div>
           </div>
 
@@ -244,7 +244,7 @@
             <div class="log-message">Stripe webhook signature verification failed</div>
             <div style="margin-top: 5px; font-size: 11px; color: #991b1b; font-family: monospace">
               Error: Webhook signature verification failed at Stripe.constructEvent
-              (/app/node_modules/stripe/lib/Webhooks.js:67:34) at PaymentController.handleWebhook
+              (/app/node_modules/stripe/lib/Webhooks:67:34) at PaymentController.handleWebhook
               (/app/src/controllers/payment.controll...
             </div>
           </div>

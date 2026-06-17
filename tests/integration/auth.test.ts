@@ -1,8 +1,8 @@
 import request from 'supertest';
 import httpStatus from 'http-status';
-import app from '../../src/app.js';
-import { connectDB, closeDB } from '../../src/config/database.js';
-import User from '../../src/models/user.model.js';
+import app from '../../src/app';
+import { connectDB, closeDB } from '../../src/config/database';
+import User from '../../src/models/user.model';
 
 beforeAll(async () => {
   await connectDB();

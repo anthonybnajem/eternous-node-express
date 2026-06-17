@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import config from '../config/config.js';
+import config from '../config/config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
