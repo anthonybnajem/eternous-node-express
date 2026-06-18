@@ -19,6 +19,8 @@ Voice-cloning app: users sign up, build family trees of loved ones, upload voice
 
 **API surfaces:** All paths under `/api/v1`, using the existing route layout.
 
+**At the end of each step:** copy the **Commit** line for `git commit`, then run the **Test** block (paste in terminal or chat). Expect the status codes / shapes noted in each step.
+
 ---
 
 ## 0. Roles & auth — use as-is (see Project rules)
@@ -93,22 +95,127 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 
 ### DB / Migrations
 - [ ] Add `migrate-mongo` migrations for all new collections and indexes
-- [ ] Seed `MemberRelationType` (father, mother, son, daughter, brother, sister, grandfather, grandmother, uncle, aunt, cousin, friend, other)
-- [ ] Seed default `Settings` on user signup (upsert by `userId`)
+- [ ] Seed `MemberRelationType` — run `npm run seed:relation-types` (script ready)
+- [x] Seed default `Settings` on user signup — `settings.service.ts` wired in register flows
 - [ ] Index audit: compound indexes for list/filter queries (trees, members, voices, credits, notifications)
 
 ### Models / `index.ts`
-- [~] Export all models from `src/models/index.ts` (currently missing Settings, Session, Tree, Member, MemberRelationType, Voice, CreditTransaction)
-- [ ] Align schemas with product spec (see per-domain gaps below)
+- [x] Export all models from `src/models/index.ts`
+- [x] Align core schemas — User, Member, SubscriptionPlan, Subscription, Notification (Phase 1.1)
 
 ### Shared infrastructure
 - [ ] Standard API response wrapper on all new endpoints (`config/response.ts`)
 - [ ] Joi validations module per domain under `src/validations/`
 - [ ] File upload middleware reuse (`fileUpload`, HEIC converter) for tree/member images and voice files
 - [ ] S3 or local storage abstraction for images + voice files (track `path`, `url`, `size`, `mimeType`)
-- [ ] Mount `activity.routes.ts` in `routes/v1/index.ts`
+- [x] Mount `activity.routes.ts` in `routes/v1/index.ts` → `/api/v1/activities`
+- [x] `activity.service.ts` — centralized activity + logger (§0.2)
 - [ ] New user-resource services scope by `req.user.id` (Project rule §4)
 - [ ] `config/notificationScheduler.ts` — register on server start (§13.1)
+
+#### Step 0.1 wrap-up (when cross-cutting DB seeds done)
+
+**Commit:** `chore: add migrations and seed member relation types`
+
+**Test:**
+```bash
+npm run migrate:up
+npm run seed:relation-types
+# Mongo: db.memberrelationtypes.find() → 13 docs (father, mother, …)
+```
+
+---
+
+## 0.2 Activity & audit logging (cross-cutting)
+
+> Every meaningful action writes to **Mongo `Activity`** + **`logger.info`**. Use `activity.service.ts` — do not duplicate `Activity.create` in controllers.
+
+### Service (`src/services/activity.service.ts`)
+
+| Helper | Use |
+|--------|-----|
+| `recordActivityFromRequest(req, userId, type, description, metadata?)` | User auth + profile actions |
+| `recordSubscriptionActivity(userId, type, description, metadata?, req?)` | Checkout, create, cancel, activate, Stripe webhook |
+| `recordAdminAction(req, action, description, metadata?)` | All dashboard/admin mutations — `type: admin_action`, `metadata.action` |
+| `recordUserProductAction(req, type, description, metadata?)` | Eternous app: tree, member, voice, chat, credit, settings, notification |
+
+### Activity types
+
+| Category | `type` values | When |
+|----------|---------------|------|
+| Auth | `register`, `login`, `logout`, `email_verified`, `password_change`, `account_deleted` | Auth controller ✅ |
+| Profile | `update_profile`, `other` (nid_submit) | User controller ✅ |
+| Subscription | `subscription_checkout`, `subscription_created`, `subscription_canceled`, `subscription_activated`, `subscription_updated` | Subscription controller + Stripe webhook ✅ |
+| Payment | `payment` | Payment intent (user) ✅ |
+| Admin | `admin_action` + `metadata.action` | See table below ✅ |
+| Eternous app | `tree`, `member`, `voice`, `chat`, `credit`, `settings`, `notification` | **Add in each new controller** (Phase 2+) |
+
+### Admin `metadata.action` values (wired ✅)
+
+| action | Endpoint |
+|--------|----------|
+| `nid_approve` / `nid_reject` | `POST /users/nidVerifyApproval`, `nidVerifyReject` |
+| `plan_create` / `plan_update` | `POST/PATCH /subscriptions/price-plans` |
+| `subscription_activate` | `PATCH /subscriptions/:id/activate` |
+| `subscription_cancel` | Admin cancel via `PATCH /subscriptions/:id/cancel` |
+| `payment_refund` | `POST /payments/:id/refund` |
+| `notification_email` / `notification_push*` | `POST /notifications/email`, `/push*` |
+| `cms_about_create` / `cms_privacy_create` / `cms_terms_create` | `POST /static/about`, `/privacy`, `/terms` |
+
+### Eternous user actions — log on every mutation (Phase 2+)
+
+| Feature | `type` | `metadata.action` examples |
+|---------|--------|------------------------------|
+| Trees | `tree` | `create`, `update`, `delete`, `duplicate`, `set_default` |
+| Members | `member` | `create`, `update`, `delete`, `favorite` |
+| Voices | `voice` | `upload`, `set_default`, `delete` |
+| Chat | `chat` | `message` (+ creditsUsed) |
+| Credits | `credit` | `grant`, `deduct` (user-visible) |
+| Settings | `settings` | `notifications_update` |
+| Inbox | `notification` | `read`, `accept_share`, `decline_share` |
+| Billing | `payment` or `subscription_*` | checkout, cancel, upgrade |
+
+**Pattern in new controllers:**
+```ts
+await activityService.recordUserProductAction(req, 'tree', 'Created tree "My Family"', {
+  action: 'create',
+  treeId: tree.id,
+});
+```
+
+### Routes
+
+| Method | Path | Access | Status |
+|--------|------|--------|--------|
+| GET | `/activities` | User (`auth('common')`) | [x] Own activities |
+| GET | `/activities/admin` | Dashboard (`auth('manageUsers')`) | [x] All activities, filter `?type=admin_action` |
+| DELETE | `/activities/:id` | User | [x] Delete own activity |
+
+#### Step 0.2 — Activity logging foundation ✅ DONE
+
+**Commit:** `feat(activity): centralize audit logging for user, subscription, and admin actions`
+
+**Test:**
+```bash
+npm run typecheck
+export BASE=http://localhost:3000/api/v1 TOKEN=<user_token> ADMIN=<admin_token>
+
+# User register/login → Activity type register/login
+curl -H "Authorization: Bearer $TOKEN" $BASE/activities
+# → 200, recent auth activities for that user
+
+# Subscription checkout (user token)
+curl -X POST $BASE/subscriptions/checkout-session -H "Authorization: Bearer $TOKEN" \
+  -d '{"planId":"...","successUrl":"http://a","cancelUrl":"http://b"}'
+# → Activity type subscription_checkout
+
+# Admin plan create
+curl -X POST $BASE/subscriptions/price-plans -H "Authorization: Bearer $ADMIN" -d '{...}'
+curl -H "Authorization: Bearer $ADMIN" "$BASE/activities/admin?type=admin_action"
+# → 200, includes action plan_create
+
+# Server logs show: Activity [admin_action] user=...: Created price plan "..."
+```
 
 ---
 
@@ -117,21 +224,21 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 > Email, Google, Facebook, Apple. OTP verify on signup. Resend OTP. No chat sessions in DB.
 
 ### DB
-- [ ] `User`: add `username` (unique, optional), `creditBalance` (number, default 0)
-- [ ] `User`: ensure `authProvider` covers email | google | facebook | apple | firebase
-- [ ] OTP fields: `oneTimeCode`, `oneTimeCodeExpiresAt` (add expiry; currently no TTL)
-- [ ] Index: `User.email`, `User.username`, `User.firebaseUid`
+- [x] `User`: `username`, `creditBalance`, `oneTimeCodeExpiresAt` fields added
+- [x] `User`: `authProvider` covers email | google | facebook | apple | firebase
+- [ ] OTP fields: enforce expiry in service (field added; logic in Phase 1.3)
+- [x] Index: `User.username`; email/firebaseUid already indexed
 
 ### Models
-- [~] `user.model.ts` — extend with `username`, `creditBalance`, `oneTimeCodeExpiresAt`
-- [ ] `settings.model.ts` — already exists; wire to signup
+- [x] `user.model.ts` — username, creditBalance, oneTimeCodeExpiresAt, isUsernameTaken
+- [x] `settings.model.ts` — wired to signup via `settings.service.ts`
 
 ### Services
 - [~] `firebaseAuth.service.ts` — sync Google/Facebook/Apple via Firebase token
 - [ ] `auth.service.ts` — OTP generate with expiry (e.g. 3–10 min), validate, resend (rate-limited)
 - [ ] `auth.service.ts` — block login until `isEmailVerified` (email provider only)
 - [ ] `email.service.ts` / SMS — send OTP; resend clears old OTP and sets new expiry
-- [ ] `user.service.ts` — create default `Settings` on register
+- [x] `settings.service.ts` — `ensureDefaultSettings` on register (email + Firebase)
 
 ### Controllers
 - [~] `auth.controller.ts` — register, login, verify-email, logout, refresh, delete-me
@@ -159,6 +266,58 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 - [~] `auth.validation.ts` — add `resendOtp` schema (email)
 - [ ] OTP: 6-digit string/number, expiry enforcement in service
 
+#### Step 1.1 — Model alignment + exports ✅ DONE
+
+**Commit:** `feat(models): align Eternous schemas and export all models`
+
+**Test:**
+```bash
+npm run typecheck
+npm run build
+# Optional: npm run seed:relation-types (needs MongoDB + .env)
+# GET http://localhost:3000/api/v1/activities — 401 without token (route mounted)
+```
+
+#### Step 1.2 — Settings on signup ✅ DONE
+
+**Commit:** `feat(auth): create default Settings on user registration`
+
+**Test:**
+```bash
+npm run dev
+# Register email user:
+curl -X POST http://localhost:3000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password1","fullName":"Test User"}'
+# Mongo: db.settings.findOne({ userId: <new_user_id> }) → notificationsEnabled: true
+```
+
+#### Step 1.3 — OTP expiry + resend
+
+**Commit:** `feat(auth): add OTP expiry and resend-otp endpoint`
+
+**Test:**
+```bash
+# Register → note oneTimeCodeExpiresAt in Mongo
+# Wait past expiry OR set expiresAt in past → POST /auth/verify-email → 400 OTP expired
+curl -X POST http://localhost:3000/api/v1/auth/resend-otp \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com"}'
+# New code in email/logs; old code invalid
+```
+
+#### Step 1.4 — Session on login (devices)
+
+**Commit:** `feat(auth): track login sessions for logged-in devices`
+
+**Test:**
+```bash
+# Login twice (different User-Agent headers)
+curl -X POST http://localhost:3000/api/v1/auth/login ... -H "User-Agent: Chrome/Mac"
+# Mongo: db.sessions.find({ userId }) → 2 active sessions with deviceName/type
+# GET /users/me/devices (when built) lists both
+```
+
 ---
 
 ## 2. Home dashboard
@@ -166,11 +325,11 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 > Favorites members, recently used members.
 
 ### DB
-- [ ] `Member.isFavorite` — index `{ userId: 1, isFavorite: 1 }`
-- [ ] `Member.lastTimeUsed` — index `{ userId: 1, lastTimeUsed: -1 }`
+- [x] `Member.isFavorite` — index `{ userId: 1, isFavorite: 1 }`
+- [x] `Member.lastTimeUsed` — index `{ userId: 1, lastTimeUsed: -1 }`
 
 ### Models
-- [~] `member.model.ts` — has `isFavorite`, `lastTimeUsed`; rename `voiceId` → `defaultVoiceId` for clarity
+- [x] `member.model.ts` — dateOfBirth, privateNotes, isRelatedMember, defaultVoiceId, indexes
 
 ### Services
 - [ ] `member.service.ts` — `getFavoriteMembers(userId)`
@@ -188,6 +347,23 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 |--------|------|--------|--------|-------|
 | GET | `/home` | User | [ ] | `{ favorites, recentlyUsed }` |
 | PATCH | `/members/:memberId/favorite` | User | [ ] | Toggle favorite (own member) |
+
+#### Step 2.4 — Home endpoint
+
+**Commit:** `feat(home): add favorites and recently used members`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -X PATCH $BASE/members/<memberId>/favorite -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"isFavorite":true}'
+# → 200
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/home
+# → 200, { favorites: [...], recentlyUsed: [...] }
+# recentlyUsed sorted by lastTimeUsed desc
+```
 
 ---
 
@@ -227,6 +403,36 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 
 ### Validations
 - [ ] `tree.validation.ts`
+
+#### Step 2.1 — Trees CRUD
+
+**Commit:** `feat(trees): add tree CRUD, duplicate, and default tree`
+
+**Test:**
+```bash
+npm run typecheck
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $TOKEN" $BASE/trees
+# → 200, body has your trees only
+
+curl -X POST $BASE/trees -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"My Family"}'
+# → 201, returns tree _id
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/trees/<treeId>
+# → 200, memberCount field present
+
+curl -X PATCH $BASE/trees/<treeId>/default -H "Authorization: Bearer $TOKEN"
+# → 200; Mongo: only one isDefault:true per userId
+
+curl -X POST $BASE/trees/<treeId>/duplicate -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"copyMembers":false}'
+# → 201, new tree id
+
+curl -X DELETE $BASE/trees/<treeId> -H "Authorization: Bearer $TOKEN"
+# → 200; list no longer shows deleted tree (isDeleted:true in Mongo)
+```
 
 ---
 
@@ -277,6 +483,34 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 ### Validations
 - [ ] `member.validation.ts`
 
+#### Step 2.2 — Members CRUD + relation types
+
+**Commit:** `feat(members): add member CRUD and relation type list`
+
+**Test:**
+```bash
+npm run seed:relation-types   # once, needs MongoDB
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token> TREE=<treeId>
+
+curl $BASE/member-relation-types
+# → 200, array includes father, mother, son (13 types)
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/trees/$TREE/members
+# → 200, empty or list
+
+curl -X POST $BASE/trees/$TREE/members -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Grandma","memberRelationTypeId":"<typeId>","biography":"..."}'
+# → 201
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/members/<memberId>
+# → 200, has relationType, voices summary, defaultVoiceId
+
+curl -X PATCH $BASE/members/<memberId>/favorite -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"isFavorite":true}'
+# → 200; Mongo: isFavorite:true
+```
+
 ---
 
 ## 5. Voice versions
@@ -314,6 +548,28 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 ### Validations
 - [ ] `voice.validation.ts`
 
+#### Step 2.3 — Voice versions upload + default
+
+**Commit:** `feat(voices): add voice upload, list, and default selection`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token> MEMBER=<memberId>
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/members/$MEMBER/voices
+# → 200, versions array (empty or v1)
+
+curl -X POST $BASE/members/$MEMBER/voices -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/path/to/sample.wav" -F "name=Version 1.0"
+# → 201, versionNumber:1, status processing or ready
+
+curl -X PATCH $BASE/members/$MEMBER/voices/<voiceId>/default -H "Authorization: Bearer $TOKEN"
+# → 200; Mongo: Member.defaultVoiceId updated, Voice.isDefault:true
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/members/$MEMBER
+# → default voice matches selected version
+```
+
 ---
 
 ## 6. Chat orchestration (proxy only)
@@ -344,6 +600,37 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 
 ### Validations
 - [ ] `chat.validation.ts`
+
+#### Step 5.1 — Chat orchestration (proxy)
+
+**Commit:** `feat(chat): add ephemeral chat proxy with voice selection`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -X POST $BASE/chat -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"memberId":"<memberId>","message":"Hello Grandma"}'
+# → 200, body: { text, audioUrl, creditsUsed, creditsRemaining }
+# Mongo: Member.lastTimeUsed updated; no chat/message collection docs
+
+curl -X POST $BASE/chat -H "Authorization: Bearer $TOKEN" \
+  -d '{"memberId":"<other_user_member>","message":"hi"}'
+# → 403 or 404 (not your member)
+```
+
+#### Step 5.2 — Credit deduct on chat
+
+**Commit:** `feat(credits): deduct credits atomically on chat`
+
+**Test:**
+```bash
+# Before chat: GET $BASE/users/me/credits → balance N
+# After chat: balance N - creditsUsed; CreditTransaction type usage in Mongo
+curl -X POST $BASE/chat ... -d '{"memberId":"...","message":"test"}'
+curl -H "Authorization: Bearer $TOKEN" $BASE/users/me/credits
+# → creditsRemaining decreased; repeat with balance 0 → 402 or 400 insufficient credits
+```
 
 ---
 
@@ -389,6 +676,44 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 
 ### Validations
 - [~] `subscriptionPlan.validation.ts` — add credits, planType
+
+#### Step 3.1 — Plan credits + Stripe webhook idempotency
+
+**Commit:** `feat(subscriptions): add plan credits and idempotent Stripe webhooks`
+
+**Test:**
+```bash
+curl $BASE/subscriptions/price-plans
+# → 200, plans include credits and planType fields
+
+# Dashboard (admin token):
+curl -X POST $BASE/subscriptions/price-plans -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Pro","price":80,"credits":100,"planType":"monthly","features":["..."]}'
+# → 201, priceId synced to Stripe
+
+# Replay same Stripe invoice webhook twice → User.creditBalance increases once only
+# Mongo: CreditTransaction idempotencyKey = invoiceId
+```
+
+#### Step 3.4 — Upgrade / cancel subscription
+
+**Commit:** `feat(subscriptions): add upgrade and cancel for own plan`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/subscriptions/me
+# → 200, current plan + status
+
+curl -X POST $BASE/subscriptions/upgrade -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"planId":"<newPlanId>"}'
+# → 200 or checkout URL
+
+curl -X PATCH $BASE/subscriptions/<subId>/cancel -H "Authorization: Bearer $TOKEN"
+# → 200; Mongo: status canceled or cancelAtPeriodEnd
+```
 
 ---
 
@@ -441,6 +766,27 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 |--------|------|--------|--------|-------|
 | POST | `/payments/:paymentIntentId/refund` | Admin | [~] | `auth('manageOrders')` — keep existing path |
 
+#### Step 3.3 — Billing overview, payment methods, history
+
+**Commit:** `feat(billing): add overview, payment methods, and history`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/billing/overview
+# → 200, { planName, priceLabel, defaultPaymentMethod }
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/billing/payment-methods
+# → 200, cards with last4, brand, isDefault
+
+curl -X POST $BASE/billing/payment-methods -H "Authorization: Bearer $TOKEN"
+# → 200, SetupIntent clientSecret for Stripe.js
+
+curl -H "Authorization: Bearer $TOKEN" "$BASE/billing/history?page=1&limit=10"
+# → 200, paginated invoices/payments
+```
+
 ---
 
 ## 9. User profile & account settings
@@ -479,6 +825,26 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 ### Validations
 - [ ] `user.validation.ts` — change password confirm match
 
+#### Step 9 — Profile `/users/me`
+
+**Commit:** `feat(users): extend profile endpoint with credits and subscription`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/users/me
+# → 200, includes creditBalance, subscription summary
+
+curl -X PATCH $BASE/users/me -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"fullName":"New Name","username":"newuser1"}'
+# → 200; duplicate username → 400
+
+curl -X POST $BASE/users/me/change-password -H "Authorization: Bearer $TOKEN" \
+  -d '{"currentPassword":"...","newPassword":"...","confirmNewPassword":"..."}'
+# → 200; mismatch confirm → 400
+```
+
 ---
 
 ## 10. Notification settings
@@ -505,6 +871,23 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 | PATCH | `/users/me/settings` | [ ] |
 | PATCH | `/users/me/settings/notifications` | [ ] |
 
+#### Step 4.2 — Notification settings API
+
+**Commit:** `feat(settings): add notification preferences endpoints`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/users/me/settings
+# → 200, notificationsEnabled, birthdayNotificationsEnabled, paymentNotificationsEnabled
+
+curl -X PATCH $BASE/users/me/settings/notifications -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"birthdayNotificationsEnabled":false}'
+# → 200; Mongo Settings doc updated
+```
+
 ---
 
 ## 11. Security — 2FA & logged-in devices
@@ -530,6 +913,43 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 | POST | `/users/me/security/2fa/enable` | [ ] | |
 | POST | `/users/me/security/2fa/disable` | [ ] | |
 | POST | `/users/me/security/2fa/verify` | [ ] | Confirm setup |
+
+#### Step 6.1 — 2FA enable/disable
+
+**Commit:** `feat(security): add two-factor authentication endpoints`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -X POST $BASE/users/me/security/2fa/enable -H "Authorization: Bearer $TOKEN"
+# → 200, secret or QR payload
+
+curl -X POST $BASE/users/me/security/2fa/verify -H "Authorization: Bearer $TOKEN" \
+  -d '{"code":"123456"}'
+# → 200; Settings.twoFactorEnabled:true
+
+curl -X POST $BASE/users/me/security/2fa/disable -H "Authorization: Bearer $TOKEN" \
+  -d '{"code":"123456"}'
+# → 200; twoFactorEnabled:false
+```
+
+#### Step 6.2 — Logout device / all devices
+
+**Commit:** `feat(security): add device list and session revoke`
+
+**Test:**
+```bash
+# Login from two clients (different User-Agent) → 2 Session docs
+curl -H "Authorization: Bearer $TOKEN" $BASE/users/me/devices
+# → 200, lists deviceName, deviceType, lastActive
+
+curl -X DELETE $BASE/users/me/devices/<sessionId> -H "Authorization: Bearer $TOKEN"
+# → 200; that refresh token no longer works
+
+curl -X DELETE $BASE/users/me/devices -H "Authorization: Bearer $TOKEN"
+# → 200; all other sessions revoked
+```
 
 ---
 
@@ -568,6 +988,26 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
 | POST | `/users/:userId/credits` | Dashboard | [ ] | `auth('manageUsers')` — manual credit adjust |
+
+#### Step 3.2 — Credits ledger + balance
+
+**Commit:** `feat(credits): add credit balance, ledger, and admin adjust`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/users/me/credits
+# → 200, { balance, recentTransactions }
+
+curl -H "Authorization: Bearer $TOKEN" "$BASE/users/me/credits/history?page=1"
+# → 200, paginated CreditTransaction list
+
+# Dashboard:
+curl -X POST $BASE/users/<userId>/credits -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"amount":50,"reason":"promo"}'
+# → 200; balance += 50; ledger entry type adjustment
+```
 
 ---
 
@@ -619,6 +1059,28 @@ admin: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getOrders',
 - “My Family” tree was successfully backed up
 - It’s been 1 year since “Grandma” was added
 - Today is Ralph’s birthday 🎉
+
+#### Step 4.1 — Notification inbox + tree share
+
+**Commit:** `feat(notifications): add inbox and tree share accept/decline`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -X POST $BASE/trees/<treeId>/share -H "Authorization: Bearer $TOKEN" \
+  -d '{"email":"friend@example.com","message":"Join my tree"}'
+# → 201; recipient sees notification type tree_share
+
+curl -H "Authorization: Bearer $FRIEND_TOKEN" $BASE/notifications
+# → 200, pending share with actionStatus pending
+
+curl -X POST $BASE/notifications/<id>/accept -H "Authorization: Bearer $FRIEND_TOKEN"
+# → 200; TreeShare status accepted
+
+curl -X PATCH $BASE/notifications/<id>/read -H "Authorization: Bearer $FRIEND_TOKEN"
+# → 200; isRead:true
+```
 
 ---
 
@@ -729,6 +1191,68 @@ src/services/notifications/
 |--------|------|--------|-------|
 | POST | `/notifications/crons/run` | Dashboard | `auth('manageUsers')` — run job by name `{ job: 'birthday' }` (dev/staging) |
 
+#### Step 4.3 — Notification scheduler + dedup log
+
+**Commit:** `chore(notifications): register cron scheduler and job dedup log`
+
+**Test:**
+```bash
+npm run dev
+# Logs on start: "Notification schedulers started" (when NOTIFICATION_CRONS_ENABLED=true)
+
+npm run test:notification-crons -- birthday
+# → creates Notification + NotificationJobLog; second run same day → skip (dedup)
+
+curl -X POST $BASE/notifications/crons/run -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"job":"birthday"}'
+# → 200, { sent, skipped }
+```
+
+#### Step 4.4 — Birthday + anniversary crons
+
+**Commit:** `feat(notifications): add birthday and anniversary cron jobs`
+
+**Test:**
+```bash
+# Mongo: set Member.dateOfBirth to today (month/day)
+npm run test:notification-crons -- birthday
+# → in-app Notification type birthday for owning userId
+
+# Mongo: set Member.createdAt to 1 year ago today
+npm run test:notification-crons -- anniversary
+# → Notification type anniversary, title mentions member name
+
+# User with birthdayNotificationsEnabled:false → job skips (check logs: skip count)
+```
+
+#### Step 4.5 — Payment reminder crons
+
+**Commit:** `feat(notifications): add payment and credits-low cron jobs`
+
+**Test:**
+```bash
+# Mongo: Subscription.endsAt in 3 days, status active
+npm run test:notification-crons -- subscription-reminder
+# → type subscription renewal message
+
+# Mongo: User.creditBalance below CREDITS_LOW_THRESHOLD
+npm run test:notification-crons -- credits-low
+# → type billing credits low message
+
+# Subscription status past_due → payment failed notification
+```
+
+#### Step 4.6 — Monthly backup-ready cron
+
+**Commit:** `feat(notifications): add monthly backup-ready notification`
+
+**Test:**
+```bash
+npm run test:notification-crons -- backup-ready
+# → type backup, title "Your monthly backup is ready"
+# → NotificationJobLog referenceKey backup:userId:2026-06 (idempotent per month)
+```
+
 ---
 
 ## 14. Archive — recordings, storage, search
@@ -769,6 +1293,27 @@ src/services/notifications/
 }
 ```
 
+#### Step 5.3 — Archive recordings + storage
+
+**Commit:** `feat(archive): add storage usage, recordings list, and download`
+
+**Test:**
+```bash
+export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/archive/storage
+# → 200, { usedBytes, quotaBytes }
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/archive/recent-sessions
+# → 200, recent listen/chat metadata (no full chat text)
+
+curl -H "Authorization: Bearer $TOKEN" "$BASE/archive/recordings?search=Grandma"
+# → 200, memberName, versionName, lastBackup, duration, size
+
+curl -H "Authorization: Bearer $TOKEN" $BASE/archive/recordings/<id>/download
+# → 200, signed URL or redirect
+```
+
 ---
 
 ## 15. File / storage layer
@@ -779,6 +1324,17 @@ src/services/notifications/
 ### Services
 - [ ] `storage.service.ts` — upload, delete, getSignedUrl, computeUserStorage(userId)
 - [ ] Enforce per-plan storage limits (from SubscriptionPlan metadata)
+
+#### Step 15 — Storage layer (supporting)
+
+**Commit:** `feat(storage): add upload helper and per-user quota tracking`
+
+**Test:**
+```bash
+# Upload tree image via POST /trees → response includes url, size, mimeType
+# Mongo: sum of Voice.size + image sizes matches GET /archive/storage usedBytes
+# Exceed plan quota → 413 or 400 storage limit exceeded
+```
 
 ---
 
@@ -819,6 +1375,18 @@ src/services/notifications/
 | POST | `/member-relation-types` | Dashboard | [ ] | Create relation type |
 | PATCH | `/member-relation-types/:id` | Dashboard | [ ] | Update relation type |
 | POST | `/payments/:paymentIntentId/refund` | Admin | [~] | `auth('manageOrders')` |
+
+#### Step 6.3 — Dashboard analytics (optional)
+
+**Commit:** `feat(admin): add optional dashboard analytics endpoint`
+
+**Test:**
+```bash
+curl -H "Authorization: Bearer $ADMIN_TOKEN" $BASE/admin/analytics
+# or existing dashboard path you choose
+# → 200, { userCount, activeSubscriptions, revenueMTD }
+# Non-admin token → 403
+```
 
 ---
 
@@ -984,11 +1552,51 @@ CREDITS_LOW_THRESHOLD=10
 | FCM + email queues | [x] |
 | Log report / cleanup crons | [x] `config/scheduler.ts` |
 | Notification crons (birthday, payment, etc.) | [ ] §13.1 — **not started** |
-| Activity logging | [~] Not routed |
+| Activity logging | [x] Central service + auth/subscription/admin wired (§0.2) |
 | Tree/Member/Voice models | [~] Schema only |
 | CreditTransaction model | [~] Schema only |
 | Settings/Session models | [~] Schema only |
 
 ---
 
-*Last updated: 2026-06-19 — §0: keep current roles/auth, no route refactor.*
+---
+
+## 21. Step checklist — Commit & Test (quick reference)
+
+Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords.
+
+| Step | Commit | Quick test |
+|------|--------|------------|
+| **0.2** ✅ | `feat(activity): centralize audit logging for user, subscription, and admin actions` | `GET /activities` (user); `GET /activities/admin?type=admin_action` (admin) |
+| **0.1** | `chore: add migrations and seed member relation types` | `npm run seed:relation-types` → 13 relation types in Mongo |
+| **1.1** ✅ | `feat(models): align Eternous schemas and export all models` | `npm run typecheck`; `GET /activities` → 401 without token |
+| **1.2** ✅ | `feat(auth): create default Settings on user registration` | Register user → `db.settings.findOne({ userId })` exists |
+| **1.3** | `feat(auth): add OTP expiry and resend-otp endpoint` | Expired OTP → 400; `POST /auth/resend-otp` → new code |
+| **1.4** | `feat(auth): track login sessions for logged-in devices` | Login twice → 2 `sessions` docs; devices list when built |
+| **2.1** | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user |
+| **2.2** | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree |
+| **2.3** | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member |
+| **2.4** | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` |
+| **3.1** | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once |
+| **3.2** | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance |
+| **3.3** | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` |
+| **3.4** | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` |
+| **4.1** | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline |
+| **4.2** | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` |
+| **4.3** | `chore(notifications): register cron scheduler and job dedup log` | Server start logs schedulers; dedup on second run |
+| **4.4** | `feat(notifications): add birthday and anniversary cron jobs` | `test:notification-crons birthday` → notification |
+| **4.5** | `feat(notifications): add payment and credits-low cron jobs` | Renewal + credits-low crons fire expected types |
+| **4.6** | `feat(notifications): add monthly backup-ready notification` | `test:notification-crons backup-ready` |
+| **5.1** | `feat(chat): add ephemeral chat proxy with voice selection` | `POST /chat` → text + audioUrl; no chat DB docs |
+| **5.2** | `feat(credits): deduct credits atomically on chat` | Balance drops; 0 credits → error |
+| **5.3** | `feat(archive): add storage usage, recordings list, and download` | `GET /archive/storage`, `/recordings`, download URL |
+| **6.1** | `feat(security): add two-factor authentication endpoints` | Enable → verify → disable 2FA |
+| **6.2** | `feat(security): add device list and session revoke` | List devices; revoke one / all |
+| **6.3** | `feat(admin): add optional dashboard analytics endpoint` | Admin analytics → 200; user → 403 |
+| **9** | `feat(users): extend profile endpoint with credits and subscription` | `GET /users/me` includes credits + plan |
+
+**Always before commit:** `npm run typecheck` (and `npm run test` when tests exist for that step).
+
+---
+
+*Last updated: 2026-06-19 — §21: Commit & Test on every step; §0: keep current roles/auth, no route refactor.*

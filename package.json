@@ -15,6 +15,7 @@
     "docker:down": "docker-compose down",
     "docker:build": "docker-compose build",
     "seed": "tsx scripts/seed.ts",
+    "seed:relation-types": "tsx scripts/seed-member-relation-types.ts",
     "test:imports": "tsx scripts/test-imports.ts",
     "test:log-report": "tsx scripts/test-log-report.ts",
     "test:email-report": "tsx scripts/test-email-report.ts",

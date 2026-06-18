@@ -2,7 +2,30 @@ import mongoose, { type HydratedDocument, type Model, type Types } from 'mongoos
 import { toJSON, paginate } from './plugins/index.ts';
 import type { PaginateModel } from '../types/common.ts';
 
-export type ActivityType = 'login' | 'logout' | 'register' | 'update_profile' | 'password_change' | 'order_placed' | 'payment' | 'other';
+export type ActivityType =
+  | 'login'
+  | 'logout'
+  | 'register'
+  | 'email_verified'
+  | 'account_deleted'
+  | 'update_profile'
+  | 'password_change'
+  | 'order_placed'
+  | 'payment'
+  | 'subscription_checkout'
+  | 'subscription_created'
+  | 'subscription_canceled'
+  | 'subscription_activated'
+  | 'subscription_updated'
+  | 'admin_action'
+  | 'tree'
+  | 'member'
+  | 'voice'
+  | 'chat'
+  | 'credit'
+  | 'settings'
+  | 'notification'
+  | 'other';
 
 export interface ActivityAttrs {
   user: Types.ObjectId;
@@ -25,7 +48,31 @@ const activitySchema = new mongoose.Schema<ActivityAttrs, ActivityModel>(
     },
     type: {
       type: String,
-      enum: ['login', 'logout', 'register', 'update_profile', 'password_change', 'order_placed', 'payment', 'other'],
+      enum: [
+        'login',
+        'logout',
+        'register',
+        'email_verified',
+        'account_deleted',
+        'update_profile',
+        'password_change',
+        'order_placed',
+        'payment',
+        'subscription_checkout',
+        'subscription_created',
+        'subscription_canceled',
+        'subscription_activated',
+        'subscription_updated',
+        'admin_action',
+        'tree',
+        'member',
+        'voice',
+        'chat',
+        'credit',
+        'settings',
+        'notification',
+        'other',
+      ],
       required: true,
     },
     description: {

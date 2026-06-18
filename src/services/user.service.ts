@@ -4,6 +4,7 @@ import { User } from '../models/index.ts';
 import type { UserAttrs, UserDocument } from '../models/user.model.ts';
 import ApiError from '../utils/ApiError.ts';
 import { sendEmailVerification } from './email.service.ts';
+import { ensureDefaultSettings } from './settings.service.ts';
 import type { AnyRecord, ObjectIdLike, PaginationOptions, UploadedFileInfo } from '../types/common.ts';
 
 export type UserCreateBody = Partial<UserAttrs> & Pick<UserAttrs, 'email'>;
@@ -24,7 +25,9 @@ const createUser = async (userBody: UserCreateBody): Promise<UserDocument> => {
     await sendEmailVerification(userBody.email, oneTimeCode);
   }
 
-  return User.create({ ...userBody, oneTimeCode });
+  const user = await User.create({ ...userBody, oneTimeCode });
+  await ensureDefaultSettings(user.id, user.email);
+  return user;
 };
 
 const queryUsers = async (filter: AnyRecord, options: PaginationOptions) => {
@@ -105,6 +108,7 @@ const isUpdateUser = async (userId: ObjectIdLike, updateBody: UserUpdateBody): P
   });
 
   await user.save();
+  await ensureDefaultSettings(user.id, user.email);
   return user;
 };
 

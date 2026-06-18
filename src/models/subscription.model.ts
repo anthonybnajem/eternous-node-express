@@ -6,6 +6,7 @@ export type SubscriptionProvider = 'stripe' | 'paypal' | 'manual';
 
 export interface SubscriptionAttrs {
   user: Types.ObjectId;
+  plan?: Types.ObjectId | null;
   name: string;
   provider?: SubscriptionProvider;
   status?: SubscriptionStatus;
@@ -15,6 +16,7 @@ export interface SubscriptionAttrs {
   canceledAt?: Date | null;
   externalCustomerId?: string;
   externalSubscriptionId?: string;
+  externalPriceId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -33,6 +35,12 @@ const subscriptionSchema = new mongoose.Schema<SubscriptionAttrs, SubscriptionMo
       type: String,
       required: true,
       trim: true,
+    },
+    plan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SubscriptionPlan',
+      default: null,
+      index: true,
     },
     provider: {
       type: String,
@@ -67,6 +75,12 @@ const subscriptionSchema = new mongoose.Schema<SubscriptionAttrs, SubscriptionMo
       default: undefined,
     },
     externalSubscriptionId: {
+      type: String,
+      trim: true,
+      default: undefined,
+      index: true,
+    },
+    externalPriceId: {
       type: String,
       trim: true,
       default: undefined,

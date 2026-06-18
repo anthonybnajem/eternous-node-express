@@ -2,11 +2,14 @@ import type { Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../utils/catchAsync.ts';
 import response from '../config/response.ts';
-import { privacyService } from '../services/index.ts';
+import { privacyService, activityService } from '../services/index.ts';
 import type { PrivacyAttrs } from '../models/privacy.model.ts';
 
 const createPrivacy = catchAsync<Record<string, never>, unknown, PrivacyAttrs>(async (req, res: Response): Promise<void> => {
   const privacy = await privacyService.createPrivacy(req.body);
+  await activityService.recordAdminAction(req, 'cms_privacy_create', 'Created privacy policy content', {
+    privacyId: privacy.id,
+  });
   res
     .status(httpStatus.CREATED)
     .json(response({ message: 'Privacy Created', status: 'OK', statusCode: httpStatus.CREATED, data: privacy }));

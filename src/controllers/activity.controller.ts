@@ -28,6 +28,24 @@ const getActivitiesById = catchAsync<Record<string, never>, unknown, unknown, Ac
   }
 );
 
+const getAdminActivities = catchAsync<Record<string, never>, unknown, unknown, ActivityQuery>(
+  async (req, res: Response): Promise<void> => {
+    const filter = pick(req.query, ['type', 'user']);
+    const options = pick(req.query, ['sortBy', 'limit', 'page']);
+
+    if (!options.sortBy) {
+      options.sortBy = 'createdAt:desc';
+    }
+
+    const activities = await Activity.paginate(filter, options);
+
+    res.status(httpStatus.OK).send({
+      message: 'All activities retrieved successfully',
+      data: activities,
+    });
+  }
+);
+
 const deleteActivityById = catchAsync<IdParams>(async (req, res: Response): Promise<void> => {
   if (!req.user) {
     throw new Error('Unauthorized');
@@ -49,4 +67,4 @@ const deleteActivityById = catchAsync<IdParams>(async (req, res: Response): Prom
   });
 });
 
-export default { getActivitiesById, deleteActivityById };
+export default { getActivitiesById, getAdminActivities, deleteActivityById };

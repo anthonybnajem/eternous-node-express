@@ -5,6 +5,7 @@ import subscriptionRoute from './subscription.routes.ts';
 import subscriptionPlanRoute from './subscription-plan.routes.ts';
 import paymentRoute from './payment.routes.ts';
 import notificationRoute from './notification.routes.ts';
+import activityRoute from './activity.routes.ts';
 import termsRoute from './terms.routes.ts';
 import privacyRoute from './privacy.routes.ts';
 import aboutRoute from './about.routes.ts';
@@ -35,6 +36,10 @@ const defaultRoutes = [
   {
     path: '/notifications',
     route: notificationRoute,
+  },
+  {
+    path: '/activities',
+    route: activityRoute,
   },
   {
     path: '/static/terms',

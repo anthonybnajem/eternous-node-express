@@ -14,6 +14,7 @@ export interface UserImage {
 
 export interface UserAttrs {
   fullName?: string;
+  username?: string;
   email: string;
   image?: UserImage | Record<string, unknown>;
   password?: string;
@@ -32,9 +33,11 @@ export interface UserAttrs {
   isSuspended?: boolean;
   lastLogin?: Date;
   oneTimeCode?: number | null;
+  oneTimeCodeExpiresAt?: Date | null;
   phoneNumberOTP?: number | null;
   nidNumber?: string;
   nidStatus?: 'unverified' | 'pending' | 'approved' | 'cancelled';
+  creditBalance?: number;
   currentSubscription?: Types.ObjectId | null;
   subscriptions?: Types.ObjectId[];
   photo?: UploadedFileInfo[];
@@ -48,6 +51,7 @@ export type UserDocument = HydratedDocument<UserAttrs, UserMethods>;
 
 export interface UserModel extends Model<UserAttrs, Record<string, never>, UserMethods>, PaginateModel<UserAttrs> {
   isEmailTaken(email: string, excludeUserId?: string | Types.ObjectId): Promise<boolean>;
+  isUsernameTaken(username: string, excludeUserId?: string | Types.ObjectId): Promise<boolean>;
   isPhoneNumberTaken(phoneNumber: string, excludeUserId?: string | Types.ObjectId): Promise<boolean>;
 }
 
@@ -58,6 +62,16 @@ const userSchema = new mongoose.Schema<UserAttrs, UserModel, UserMethods>(
       required: false,
       trim: true,
       default: '',
+    },
+    username: {
+      type: String,
+      required: false,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+      unique: true,
+      index: true,
+      default: undefined,
     },
     email: {
       type: String,
@@ -151,6 +165,10 @@ const userSchema = new mongoose.Schema<UserAttrs, UserModel, UserMethods>(
       type: Number,
       default: null,
     },
+    oneTimeCodeExpiresAt: {
+      type: Date,
+      default: null,
+    },
     phoneNumberOTP: {
       type: Number,
       default: null,
@@ -163,6 +181,11 @@ const userSchema = new mongoose.Schema<UserAttrs, UserModel, UserMethods>(
       type: String,
       enum: ['unverified', 'pending', 'approved', 'cancelled'],
       default: 'unverified',
+    },
+    creditBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     lastLogin: {
       type: Date,
@@ -192,6 +215,17 @@ userSchema.plugin(paginate as never);
 
 userSchema.statics.isEmailTaken = async function (email: string, excludeUserId?: string | Types.ObjectId): Promise<boolean> {
   const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
+  return !!user;
+};
+
+userSchema.statics.isUsernameTaken = async function (
+  username: string,
+  excludeUserId?: string | Types.ObjectId
+): Promise<boolean> {
+  if (!username?.trim()) {
+    return false;
+  }
+  const user = await this.findOne({ username: username.toLowerCase(), _id: { $ne: excludeUserId } });
   return !!user;
 };
 

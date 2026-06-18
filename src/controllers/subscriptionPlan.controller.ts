@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../utils/catchAsync.ts';
 import response from '../config/response.ts';
-import { subscriptionPlanService } from '../services/index.ts';
+import { subscriptionPlanService, activityService } from '../services/index.ts';
 import type { SubscriptionPlanAttrs } from '../models/subscriptionPlan.model.ts';
 import ApiError from '../utils/ApiError.ts';
 
@@ -38,6 +38,11 @@ const createPricePlan = catchAsync<EmptyParams, unknown, SubscriptionPlanAttrs, 
   async (req, res: Response): Promise<void> => {
     requireAdmin(req);
     const plan = await subscriptionPlanService.createSubscriptionPlan(req.body);
+    await activityService.recordAdminAction(req, 'plan_create', `Created price plan "${plan.name}"`, {
+      planId: plan.id,
+      priceId: plan.priceId,
+      amount: plan.amount,
+    });
     res.status(httpStatus.CREATED).json(
       response({
         message: 'Price plan created successfully',
@@ -53,6 +58,10 @@ const updatePricePlan = catchAsync<PlanIdParams, unknown, Partial<SubscriptionPl
   async (req, res: Response): Promise<void> => {
     requireAdmin(req);
     const plan = await subscriptionPlanService.updateSubscriptionPlan(req.params.planId, req.body);
+    await activityService.recordAdminAction(req, 'plan_update', `Updated price plan "${plan.name}"`, {
+      planId: plan.id,
+      priceId: plan.priceId,
+    });
     res.status(httpStatus.OK).json(
       response({
         message: 'Price plan updated successfully',

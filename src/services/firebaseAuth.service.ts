@@ -3,6 +3,7 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 import initializeFirebaseApp from '../config/firebase.ts';
 import ApiError from '../utils/ApiError.ts';
 import User, { type AuthProvider, type UserDocument } from '../models/user.model.ts';
+import { ensureDefaultSettings } from './settings.service.ts';
 
 const mapFirebaseProvider = (provider?: string): AuthProvider => {
   switch (provider) {
@@ -74,14 +75,17 @@ const syncFirebaseUser = async (
   if (existingUser) {
     Object.assign(existingUser, userData);
     await existingUser.save();
+    await ensureDefaultSettings(existingUser.id, existingUser.email);
     return existingUser;
   }
 
-  return User.create({
+  const user = await User.create({
     ...userData,
     role: 'user',
     address: '',
   });
+  await ensureDefaultSettings(user.id, user.email);
+  return user;
 };
 
 const deleteFirebaseUser = async (uid: string): Promise<void> => {

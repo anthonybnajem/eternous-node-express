@@ -70,6 +70,8 @@ const router = express.Router();
  */
 router.route('/').get(auth('common'), activityController.getActivitiesById);
 
+router.route('/admin').get(auth('manageUsers'), activityController.getAdminActivities);
+
 /**
  * @swagger
  * /v1/activities/{id}:

@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../utils/catchAsync.ts';
 import response from '../config/response.ts';
-import { subscriptionPlanService, subscriptionService } from '../services/index.ts';
+import { subscriptionPlanService, subscriptionService, activityService } from '../services/index.ts';
 import type { SubscriptionProvider, SubscriptionStatus } from '../models/subscription.model.ts';
 import ApiError from '../utils/ApiError.ts';
 import * as stripeService from '../services/payments/stripe.service.ts';
@@ -104,6 +104,14 @@ const createSubscription = catchAsync<EmptyParams, unknown, CreateSubscriptionBo
       metadata: req.body.metadata,
     });
 
+    await activityService.recordSubscriptionActivity(
+      user.id,
+      'subscription_created',
+      `${user.email} created subscription "${subscription.name}"`,
+      { subscriptionId: subscription.id, status: subscription.status, provider: subscription.provider },
+      req
+    );
+
     res.status(httpStatus.CREATED).json(
       response({
         message: 'Subscription created successfully',
@@ -162,6 +170,18 @@ const createCheckoutSession = catchAsync<EmptyParams, unknown, CreateCheckoutSes
       ),
     });
 
+    await activityService.recordSubscriptionActivity(
+      user.id,
+      'subscription_checkout',
+      `${user.email} started checkout for plan "${planName}"`,
+      {
+        planId: selectedPlan?._id ? String(selectedPlan._id) : undefined,
+        priceId: resolvedPriceId,
+        checkoutSessionId: checkoutSession.sessionId,
+      },
+      req
+    );
+
     res.status(httpStatus.CREATED).json(
       response({
         message: 'Checkout session created successfully',
@@ -191,6 +211,24 @@ const cancelSubscription = catchAsync<SubscriptionIdParams, unknown, CancelSubsc
       req.body.endsAt === null || req.body.endsAt === undefined ? null : new Date(req.body.endsAt)
     );
 
+    const isAdminCancel = user.role === 'admin' && String(subscription.user) !== String(user.id);
+    if (isAdminCancel) {
+      await activityService.recordAdminAction(req, 'subscription_cancel', `Admin canceled subscription for user ${subscription.user}`, {
+        subscriptionId: updatedSubscription.id,
+        targetUserId: String(subscription.user),
+      });
+    }
+
+    await activityService.recordSubscriptionActivity(
+      String(subscription.user),
+      'subscription_canceled',
+      isAdminCancel
+        ? `Subscription "${updatedSubscription.name}" canceled by admin`
+        : `${user.email} canceled subscription "${updatedSubscription.name}"`,
+      { subscriptionId: updatedSubscription.id, canceledBy: isAdminCancel ? 'admin' : 'user' },
+      req
+    );
+
     res.status(httpStatus.OK).json(
       response({
         message: 'Subscription canceled successfully',
@@ -210,6 +248,19 @@ const activateSubscription = catchAsync<SubscriptionIdParams, unknown, unknown, 
   }
 
   const subscription = await subscriptionService.activateSubscription(req.params.subscriptionId);
+
+  await activityService.recordAdminAction(req, 'subscription_activate', `Activated subscription "${subscription.name}"`, {
+    subscriptionId: subscription.id,
+    targetUserId: String(subscription.user),
+  });
+
+  await activityService.recordSubscriptionActivity(
+    String(subscription.user),
+    'subscription_activated',
+    `Subscription "${subscription.name}" activated by admin`,
+    { subscriptionId: subscription.id, activatedBy: user.email },
+    req
+  );
 
   res.status(httpStatus.OK).json(
     response({

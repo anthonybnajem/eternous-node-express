@@ -3,11 +3,8 @@ import httpStatus from 'http-status';
 import catchAsync from '../utils/catchAsync.ts';
 import ApiError from '../utils/ApiError.ts';
 import response from '../config/response.ts';
-import logger from '../config/logger.ts';
-import { authService, userService, tokenService, emailService } from '../services/index.ts';
+import { authService, userService, tokenService, emailService, activityService } from '../services/index.ts';
 import { deleteFirebaseUser, syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service.ts';
-import { Activity } from '../models/index.ts';
-import type { ActivityType } from '../models/activity.model.ts';
 import type {
   ChangePasswordBody,
   DeleteMeBody,
@@ -40,27 +37,6 @@ const syncFirebaseAuth = async (idToken: string, fullName?: string) => {
   }
 
   return user;
-};
-
-const recordActivity = async (
-  req: Pick<Request, 'ip' | 'get'>,
-  userId: string,
-  type: ActivityType,
-  description: string,
-  metadata: Record<string, unknown> = {}
-): Promise<void> => {
-  try {
-    await Activity.create({
-      user: userId,
-      type,
-      description,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-      metadata,
-    });
-  } catch (error) {
-    logger.error('Failed to record activity:', error);
-  }
 };
 
 const handleLegacyRegister = async (body: RegisterBody) => {
@@ -104,7 +80,7 @@ const register = catchAsync<EmptyParams, unknown, RegisterBody, EmptyQuery>(asyn
   const { userAgent, ipAddress } = getClientMetadata(req);
   const tokens = await tokenService.generateAuthTokens(user, undefined, undefined, userAgent, ipAddress);
 
-  await recordActivity(
+  await activityService.recordActivityFromRequest(
     req,
     user.id,
     'register',
@@ -140,7 +116,7 @@ const login = catchAsync<EmptyParams, unknown, LoginBody, EmptyQuery>(async (req
   const { userAgent, ipAddress } = getClientMetadata(req);
   const tokens = await tokenService.generateAuthTokens(user, undefined, undefined, userAgent, ipAddress);
 
-  await recordActivity(
+  await activityService.recordActivityFromRequest(
     req,
     user.id,
     'login',
@@ -166,7 +142,7 @@ const logout = catchAsync(async (req: Request, res: Response): Promise<void> => 
 
   const user = await authService.logout(refreshToken);
 
-  await recordActivity(req, String(user.id), 'logout', `${user.email} logged out successfully`, {
+  await activityService.recordActivityFromRequest(req, String(user.id), 'logout', `${user.email} logged out successfully`, {
     authProvider: user.authProvider,
   });
 
@@ -245,7 +221,7 @@ const changePassword = catchAsync<EmptyParams, unknown, ChangePasswordBody, Empt
       throw new ApiError(httpStatus.UNAUTHORIZED, 'You are not authorized');
     }
     const user = await authService.changePassword(req.user, req.body);
-    await recordActivity(
+    await activityService.recordActivityFromRequest(
       req,
       user.id,
       'password_change',
@@ -273,10 +249,10 @@ const verifyEmail = catchAsync<EmptyParams, unknown, VerifyEmailBody, Record<str
     const { userAgent, ipAddress } = getClientMetadata(req);
     const tokens = await tokenService.generateAuthTokens(user, undefined, undefined, userAgent, ipAddress);
 
-    await recordActivity(
+    await activityService.recordActivityFromRequest(
       req,
       user.id,
-      'other',
+      'email_verified',
       `${user.email} verified email successfully`,
       { authProvider: user.authProvider }
     );
@@ -317,7 +293,7 @@ const deleteMe = catchAsync<EmptyParams, unknown, DeleteMeBody, EmptyQuery>(asyn
     isSuspended: true,
   });
 
-  await recordActivity(req, user.id, 'other', `${user.email} deleted account`, {
+  await activityService.recordActivityFromRequest(req, user.id, 'account_deleted', `${user.email} deleted account`, {
     authProvider: user.authProvider,
   });
 

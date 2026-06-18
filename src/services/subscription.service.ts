@@ -2,6 +2,7 @@ import type Stripe from 'stripe';
 import httpStatus from 'http-status';
 import type { Types } from 'mongoose';
 import { Subscription, User } from '../models/index.ts';
+import activityService from './activity.service.ts';
 import type { SubscriptionDocument, SubscriptionProvider, SubscriptionStatus } from '../models/subscription.model.ts';
 import ApiError from '../utils/ApiError.ts';
 import type { ObjectIdLike } from '../types/common.ts';
@@ -121,6 +122,7 @@ const syncSubscriptionFromStripe = async (
   });
 
   if (existingSubscription) {
+    const previousStatus = existingSubscription.status;
     Object.assign(existingSubscription, subscriptionData);
     await existingSubscription.save();
 
@@ -134,6 +136,23 @@ const syncSubscriptionFromStripe = async (
       }
     }
 
+    if (previousStatus !== subscriptionData.status) {
+      const activityType =
+        subscriptionData.status === 'canceled' ? 'subscription_canceled' : 'subscription_updated';
+      await activityService.recordSubscriptionActivity(
+        resolvedUserId,
+        activityType,
+        `Stripe subscription "${subscriptionData.name}" ${activityType === 'subscription_canceled' ? 'canceled' : 'updated'} (${subscriptionData.status})`,
+        {
+          subscriptionId: existingSubscription.id,
+          source: 'stripe_webhook',
+          previousStatus,
+          status: subscriptionData.status,
+          externalSubscriptionId: stripeSubscription.id,
+        }
+      );
+    }
+
     return existingSubscription;
   }
 
@@ -145,6 +164,18 @@ const syncSubscriptionFromStripe = async (
   if (subscriptionData.status !== 'active' && subscriptionData.status !== 'trial') {
     await updateSubscriptionById(createdSubscription._id, subscriptionData);
   }
+
+  await activityService.recordSubscriptionActivity(
+    resolvedUserId,
+    'subscription_created',
+    `Stripe subscription "${subscriptionData.name}" created (${subscriptionData.status})`,
+    {
+      subscriptionId: createdSubscription.id,
+      source: 'stripe_webhook',
+      status: subscriptionData.status,
+      externalSubscriptionId: stripeSubscription.id,
+    }
+  );
 
   return createdSubscription;
 };

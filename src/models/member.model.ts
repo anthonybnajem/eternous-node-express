@@ -1,21 +1,24 @@
 import mongoose, { type HydratedDocument, type Model, type Types } from 'mongoose';
-import { paginate } from './plugins/index.ts';
+import { paginate, toJSON } from './plugins/index.ts';
 import type { PaginateModel } from '../types/common.ts';
 
 export interface MemberAttrs {
   userId: Types.ObjectId;
   name?: string;
   bio?: string;
+  privateNotes?: string;
   customGreetings?: string;
+  dateOfBirth?: Date | null;
   relatedToMemberId?: Types.ObjectId;
   treeId?: Types.ObjectId;
   image?: Record<string, unknown>;
   linkId?: string;
-  memberRelationTypeId?: Types.ObjectId; // example: son/father/mother...
+  memberRelationTypeId?: Types.ObjectId;
   nickname?: string;
+  isRelatedMember?: boolean;
   isFavorite?: boolean;
   lastTimeUsed?: Date;
-  voiceId?: Types.ObjectId;
+  defaultVoiceId?: Types.ObjectId;
 }
 
 export type MemberDocument = HydratedDocument<MemberAttrs>;
@@ -42,10 +45,23 @@ const memberSchema = new mongoose.Schema<MemberAttrs, MemberModel>(
       required: false,
     },
 
+    privateNotes: {
+      type: String,
+      trim: true,
+      required: false,
+      default: '',
+    },
+
     customGreetings: {
       type: String,
       trim: true,
       required: false,
+    },
+
+    dateOfBirth: {
+      type: Date,
+      required: false,
+      default: null,
     },
 
     relatedToMemberId: {
@@ -56,11 +72,11 @@ const memberSchema = new mongoose.Schema<MemberAttrs, MemberModel>(
     },
 
     treeId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Tree',
-    required: false,
-    index: true,
-    default: null,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tree',
+      required: false,
+      index: true,
+      default: null,
     },
 
     image: {
@@ -89,6 +105,11 @@ const memberSchema = new mongoose.Schema<MemberAttrs, MemberModel>(
       required: false,
     },
 
+    isRelatedMember: {
+      type: Boolean,
+      default: true,
+    },
+
     isFavorite: {
       type: Boolean,
       default: false,
@@ -101,7 +122,7 @@ const memberSchema = new mongoose.Schema<MemberAttrs, MemberModel>(
       default: null,
     },
 
-    voiceId: {
+    defaultVoiceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Voice',
       required: false,
@@ -113,6 +134,11 @@ const memberSchema = new mongoose.Schema<MemberAttrs, MemberModel>(
   }
 );
 
+memberSchema.index({ userId: 1, isFavorite: 1 });
+memberSchema.index({ userId: 1, lastTimeUsed: -1 });
+memberSchema.index({ userId: 1, treeId: 1 });
+
+memberSchema.plugin(toJSON as never);
 memberSchema.plugin(paginate as never);
 
 export default mongoose.model<MemberAttrs, MemberModel>('Member', memberSchema);

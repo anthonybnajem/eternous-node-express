@@ -2,6 +2,7 @@ import mongoose, { type HydratedDocument } from 'mongoose';
 import { toJSON } from './plugins/index.ts';
 
 export type SubscriptionBillingInterval = 'day' | 'week' | 'month' | 'year' | 'one_time';
+export type SubscriptionPlanType = 'monthly' | 'yearly' | 'preservation';
 
 export interface SubscriptionPlanAttrs {
   name: string;
@@ -10,6 +11,8 @@ export interface SubscriptionPlanAttrs {
   priceId: string;
   currency?: string;
   amount?: number;
+  credits?: number;
+  planType?: SubscriptionPlanType;
   interval?: SubscriptionBillingInterval;
   trialDays?: number;
   features?: string[];
@@ -56,6 +59,18 @@ const subscriptionPlanSchema = new mongoose.Schema<SubscriptionPlanAttrs>(
       required: false,
       default: 0,
       min: 0,
+    },
+    credits: {
+      type: Number,
+      required: false,
+      default: 0,
+      min: 0,
+    },
+    planType: {
+      type: String,
+      enum: ['monthly', 'yearly', 'preservation'],
+      default: 'monthly',
+      index: true,
     },
     interval: {
       type: String,

@@ -2,36 +2,13 @@ import type { Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../utils/catchAsync.ts';
 import * as userService from '../services/user.service.ts';
+import { activityService } from '../services/index.ts';
 import pick from '../utils/pick.ts';
-import logger from '../config/logger.ts';
-import { Activity } from '../models/index.ts';
-import type { ActivityType } from '../models/activity.model.ts';
 
 type UserIdParams = { userId: string };
 type NidBody = { nidNumber: string };
 type UserIdBody = { userId: string };
 type UserQuery = Record<string, string | undefined>;
-
-const recordActivity = async (
-  req: Parameters<typeof catchAsync>[0] extends (...args: infer Args) => unknown ? Args[0] : never,
-  userId: string,
-  type: ActivityType,
-  description: string,
-  metadata: Record<string, unknown> = {}
-): Promise<void> => {
-  try {
-    await Activity.create({
-      user: userId,
-      type,
-      description,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-      metadata,
-    });
-  } catch (error) {
-    logger.error('Failed to record activity:', error);
-  }
-};
 
 const interestList = catchAsync(async (_req, res: Response): Promise<void> => {
   const interests = await userService.interestList();
@@ -61,7 +38,7 @@ const updateUser = catchAsync<UserIdParams, unknown, userService.UserUpdateBody>
   const files = Array.isArray(req.files) ? req.files : undefined;
   const user = await userService.updateUserById(req.params.userId, req.body, files);
   if (req.user) {
-    await recordActivity(req, req.user.id, 'update_profile', `${req.user.email} updated profile`, {
+    await activityService.recordActivityFromRequest(req, req.user.id, 'update_profile', `${req.user.email} updated profile`, {
       targetUserId: user.id,
     });
   }
@@ -77,6 +54,10 @@ const verifyNid = catchAsync<Record<string, never>, unknown, NidBody>(async (req
     throw new Error('Unauthorized');
   }
   const user = await userService.verifyNid(req.user.id, nidNumber);
+  await activityService.recordActivityFromRequest(req, req.user.id, 'other', `${req.user.email} submitted NID verification`, {
+    action: 'nid_submit',
+    nidNumber,
+  });
   res.status(httpStatus.OK).send({
     message: 'NID verification submitted successfully',
     data: user,
@@ -86,6 +67,10 @@ const verifyNid = catchAsync<Record<string, never>, unknown, NidBody>(async (req
 const nidVerifyApproval = catchAsync<Record<string, never>, unknown, UserIdBody>(async (req, res: Response): Promise<void> => {
   const { userId } = req.body;
   const user = await userService.nidVerifyApproval(userId);
+  await activityService.recordAdminAction(req, 'nid_approve', `Approved NID verification for user ${userId}`, {
+    targetUserId: userId,
+    targetEmail: user.email,
+  });
   res.status(httpStatus.OK).send({
     message: 'NID verification approved successfully',
     data: user,
@@ -95,6 +80,10 @@ const nidVerifyApproval = catchAsync<Record<string, never>, unknown, UserIdBody>
 const nidVerifyReject = catchAsync<Record<string, never>, unknown, UserIdBody>(async (req, res: Response): Promise<void> => {
   const { userId } = req.body;
   const user = await userService.nidVerifyReject(userId);
+  await activityService.recordAdminAction(req, 'nid_reject', `Rejected NID verification for user ${userId}`, {
+    targetUserId: userId,
+    targetEmail: user.email,
+  });
   res.status(httpStatus.OK).send({
     message: 'NID verification rejected',
     data: user,
