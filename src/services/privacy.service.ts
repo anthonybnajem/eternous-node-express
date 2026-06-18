@@ -1,5 +1,5 @@
-import { Privacy } from '../models/index';
-import type { PrivacyAttrs, PrivacyDocument } from '../models/privacy.model';
+import { Privacy } from '../models/index.ts';
+import type { PrivacyAttrs, PrivacyDocument } from '../models/privacy.model.ts';
 
 const createPrivacy = async (privacyBody: PrivacyAttrs): Promise<PrivacyDocument> => {
   const existingPrivacy = await Privacy.findOne();

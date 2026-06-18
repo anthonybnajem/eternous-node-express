@@ -1,6 +1,6 @@
-# Node Backend Boilerplate
+# Node.js Backend Boilerplate
 
-A **professional, universal, production-ready Node backend boilerplate** built with Express, MongoDB, Redis, and comprehensive features to power any application (SaaS, e-commerce, blog, etc.).
+A **professional, universal, production-ready Node.js backend boilerplate** built with Express, MongoDB, Redis, and comprehensive features to power any application (SaaS, e-commerce, blog, etc.).
 
 [![CI/CD](https://github.com/devSahinur/nodejs-backend-boilerplate/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/devSahinur/nodejs-backend-boilerplate/actions)
 [![codecov](https://codecov.io/gh/devSahinur/nodejs-backend-boilerplate/branch/main/graph/badge.svg)](https://codecov.io/gh/devSahinur/nodejs-backend-boilerplate)
@@ -27,7 +27,7 @@ A **professional, universal, production-ready Node backend boilerplate** built w
 
 ### Core Features
 
-- ✅ **RESTful API** with Express
+- ✅ **RESTful API** with Express.js
 - ✅ **MongoDB** database with Mongoose ODM
 - ✅ **Redis** for caching and queues
 - ✅ **JWT Authentication** with access & refresh tokens
@@ -64,7 +64,7 @@ Before you begin, ensure you have the following installed on your system:
 
 ### Required
 
-1. **Node (>= 18.0.0)**
+1. **Node.js (>= 18.0.0)**
    - **macOS**:
      ```bash
      brew install node@18
@@ -76,7 +76,7 @@ Before you begin, ensure you have the following installed on your system:
      sudo apt-get install -y nodejs
      ```
 
-2. **npm (>= 9.0.0)** - Comes with Node
+2. **npm (>= 9.0.0)** - Comes with Node.js
    ```bash
    node --version   # Should be >= 18.0.0
    npm --version    # Should be >= 9.0.0
@@ -187,7 +187,7 @@ This is the **easiest way** to get started. Docker will handle MongoDB, Redis, a
    - Health Check: http://localhost:3000/health
    - Mongo Express: http://localhost:8081 (username: `admin`, password: `admin123`)
    - Firebase Auth Test Page: http://localhost:3000/firebase-auth-test.html
-   - Firebase web config endpoint: http://localhost:3000/firebase-config
+   - Firebase web config endpoint: http://localhost:3000/firebase-config.js
 
 7. **View logs**
 
@@ -446,7 +446,7 @@ npm start
 npm install -g pm2
 
 # Start with PM2
-pm2 start dist/src/index --name nodejs-backend
+pm2 start dist/src/index.js --name nodejs-backend
 
 # View logs
 pm2 logs nodejs-backend
@@ -604,9 +604,9 @@ Tests are located in the `tests/` directory:
 ```
 tests/
 ├── integration/      # Integration tests
-│   ├── auth.test
-│   ├── user.test
-│   └── product.test
+│   ├── auth.test.js
+│   ├── user.test.js
+│   └── product.test.js
 └── unit/            # Unit tests
     ├── services/
     └── utils/
@@ -616,7 +616,7 @@ Example test:
 
 ```javascript
 import request from 'supertest';
-import app from '../src/app';
+import app from '../src/app.js';
 
 describe('Auth endpoints', () => {
   test('should register a new user', async () => {
@@ -733,7 +733,7 @@ The boilerplate includes a powerful automated log reporting system that sends em
 - 📊 **Comprehensive Stats**: Error counts, warnings, system metrics
 - 🎨 **Visual Dashboard**: Color-coded health status and statistics
 - 🔍 **Error Details**: Top errors and warnings with timestamps
-- 💻 **System Metrics**: Memory usage, uptime, Node version
+- 💻 **System Metrics**: Memory usage, uptime, Node.js version
 - 🌍 **Timezone Support**: Configure reports in any timezone
 - 👥 **Multiple Recipients**: Send to multiple email addresses
 
@@ -786,7 +786,7 @@ Each report includes:
 5. **System Metrics**:
    - Application uptime
    - Memory usage (RSS, Heap)
-   - Node version
+   - Node.js version
    - Platform information
 6. **Log Distribution**: Breakdown by log level (info, http, debug)
 
@@ -804,7 +804,7 @@ Each report includes:
 You can manually trigger a log report without waiting for the schedule:
 
 ```javascript
-import { sendImmediateReport } from './src/config/scheduler';
+import { sendImmediateReport } from './src/config/scheduler.js';
 
 // Send to configured recipients
 await sendImmediateReport();
@@ -815,7 +815,7 @@ await sendImmediateReport(['custom@example.com'], 30);
 
 ### Customizing Report Time
 
-To change when reports are sent, modify the schedule in `src/config/scheduler`:
+To change when reports are sent, modify the schedule in `src/config/scheduler.js`:
 
 ```javascript
 const SCHEDULE_PATTERNS = {
@@ -861,9 +861,9 @@ Then check your email after 10 minutes to verify the report format.
 
 **Want different report formats?**
 
-- Modify `src/services/emailReport.service`
+- Modify `src/services/emailReport.service.js`
 - Customize HTML template in `generateEmailTemplate()`
-- Add custom metrics in `src/services/logReport.service`
+- Add custom metrics in `src/services/logReport.service.js`
 
 ## Deployment
 
@@ -966,7 +966,7 @@ git push heroku main
 # SSH into your server
 ssh user@your-server-ip
 
-# Install Node
+# Install Node.js
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
@@ -987,7 +987,7 @@ npm install
 nano .env
 
 # Start with PM2
-pm2 start dist/src/index --name nodejs-backend
+pm2 start dist/src/index.js --name nodejs-backend
 
 # Set up PM2 to start on boot
 pm2 startup
@@ -1041,84 +1041,84 @@ nodejs-backend-boilerplate/
 │   └── seed.ts                    # Database seeding script
 ├── src/
 │   ├── config/                    # Configuration files
-│   │   ├── config             # Environment configuration
-│   │   ├── database           # MongoDB connection
-│   │   ├── logger             # Winston logger setup
-│   │   ├── metrics            # Prometheus metrics
-│   │   ├── morgan             # HTTP request logger
-│   │   ├── passport           # Passport JWT strategy
-│   │   ├── redis              # Redis client
-│   │   ├── roles              # User roles definition
-│   │   ├── swagger            # Swagger/OpenAPI setup
-│   │   └── tokens             # Token types
+│   │   ├── config.js             # Environment configuration
+│   │   ├── database.js           # MongoDB connection
+│   │   ├── logger.js             # Winston logger setup
+│   │   ├── metrics.js            # Prometheus metrics
+│   │   ├── morgan.js             # HTTP request logger
+│   │   ├── passport.js           # Passport JWT strategy
+│   │   ├── redis.js              # Redis client
+│   │   ├── roles.js              # User roles definition
+│   │   ├── swagger.js            # Swagger/OpenAPI setup
+│   │   └── tokens.js             # Token types
 │   ├── controllers/               # Request handlers
-│   │   ├── auth.controller
-│   │   ├── user.controller
-│   │   ├── product.controller
-│   │   ├── order.controller
-│   │   ├── payment.controller
-│   │   └── notification.controller
+│   │   ├── auth.controller.js
+│   │   ├── user.controller.js
+│   │   ├── product.controller.js
+│   │   ├── order.controller.js
+│   │   ├── payment.controller.js
+│   │   └── notification.controller.js
 │   ├── middlewares/               # Custom middleware
-│   │   ├── auth               # JWT authentication
-│   │   ├── error              # Error handling
-│   │   ├── validate           # Request validation
-│   │   ├── rateLimiter        # Rate limiting
-│   │   └── fileUpload         # File upload handling
+│   │   ├── auth.js               # JWT authentication
+│   │   ├── error.js              # Error handling
+│   │   ├── validate.js           # Request validation
+│   │   ├── rateLimiter.js        # Rate limiting
+│   │   └── fileUpload.js         # File upload handling
 │   ├── models/                    # Mongoose models
-│   │   ├── user.model
-│   │   ├── token.model
-│   │   ├── product.model
-│   │   ├── order.model
-│   │   ├── terms.model
-│   │   ├── privacy.model
-│   │   ├── about.model
+│   │   ├── user.model.js
+│   │   ├── token.model.js
+│   │   ├── product.model.js
+│   │   ├── order.model.js
+│   │   ├── terms.model.js
+│   │   ├── privacy.model.js
+│   │   ├── about.model.js
 │   │   └── plugins/              # Mongoose plugins
-│   │       ├── paginate.plugin
-│   │       └── toJSON.plugin
+│   │       ├── paginate.plugin.js
+│   │       └── toJSON.plugin.js
 │   ├── queues/                    # Background job queues
 │   │   ├── index.ts              # Queue definitions
 │   │   └── processors/           # Job processors
-│   │       ├── email.processor
-│   │       ├── notification.processor
-│   │       └── order.processor
+│   │       ├── email.processor.js
+│   │       ├── notification.processor.js
+│   │       └── order.processor.js
 │   ├── routes/                    # API routes
 │   │   └── v1/
 │   │       ├── index.ts          # Route aggregator
-│   │       ├── auth.routes
-│   │       ├── user.routes
-│   │       ├── product.routes
-│   │       ├── order.routes
-│   │       ├── payment.routes
-│   │       ├── notification.routes
-│   │       ├── terms.routes
-│   │       ├── privacy.routes
-│   │       └── about.routes
+│   │       ├── auth.routes.js
+│   │       ├── user.routes.js
+│   │       ├── product.routes.js
+│   │       ├── order.routes.js
+│   │       ├── payment.routes.js
+│   │       ├── notification.routes.js
+│   │       ├── terms.routes.js
+│   │       ├── privacy.routes.js
+│   │       └── about.routes.js
 │   ├── services/                  # Business logic
-│   │   ├── auth.service
-│   │   ├── user.service
-│   │   ├── token.service
-│   │   ├── product.service
-│   │   ├── order.service
+│   │   ├── auth.service.js
+│   │   ├── user.service.js
+│   │   ├── token.service.js
+│   │   ├── product.service.js
+│   │   ├── order.service.js
 │   │   ├── payments/
-│   │   │   └── stripe.service
+│   │   │   └── stripe.service.js
 │   │   └── notifications/
-│   │       ├── email.service
-│   │       └── fcm.service
+│   │       ├── email.service.js
+│   │       └── fcm.service.js
 │   ├── utils/                     # Utility functions
-│   │   ├── ApiError           # Custom error class
-│   │   ├── catchAsync         # Async error wrapper
-│   │   └── pick               # Object property picker
+│   │   ├── ApiError.js           # Custom error class
+│   │   ├── catchAsync.js         # Async error wrapper
+│   │   └── pick.js               # Object property picker
 │   ├── validations/               # Joi validation schemas
-│   │   ├── auth.validation
-│   │   ├── user.validation
-│   │   ├── product.validation
-│   │   ├── order.validation
-│   │   └── custom.validation
+│   │   ├── auth.validation.js
+│   │   ├── user.validation.js
+│   │   ├── product.validation.js
+│   │   ├── order.validation.js
+│   │   └── custom.validation.js
 │   ├── app.ts                     # Express app setup
 │   └── index.ts                   # Entry point
 ├── tests/                         # Test files
 │   ├── integration/
-│   │   └── auth.test
+│   │   └── auth.test.js
 │   └── unit/
 ├── .dockerignore                  # Docker ignore file
 ├── .env.example                   # Environment variables template
@@ -1186,7 +1186,7 @@ npm test
 
 **What it does:**
 
-- Runs all `*.test` and `*.spec` files
+- Runs all `*.test.js` and `*.spec.js` files
 - Generates coverage reports in `coverage/` directory
 - Requires 70% code coverage (configurable in `jest.config.ts`)
 
@@ -1239,7 +1239,7 @@ npm run lint
 - Airbnb JavaScript style guide compliance
 - Import/export statement correctness
 - Potential bugs and code smells
-- Best practices for Node and Express
+- Best practices for Node.js and Express
 
 **Configuration:** See `.eslintrc.json` for rules.
 
@@ -1600,11 +1600,11 @@ stripe listen
 
 ### ES Module Errors
 
-Ensure all import statements include `` extension:
+Ensure all import statements include `.js` extension:
 
 ```javascript
 // ✅ Correct
-import User from './models/user.model';
+import User from './models/user.model.js';
 
 // ❌ Wrong
 import User from './models/user.model';
@@ -1684,9 +1684,9 @@ This project is licensed under the MIT License.
 
 ## Acknowledgments
 
-- [Express](https://expressjs.com/) - Web framework
+- [Express.js](https://expressjs.com/) - Web framework
 - [Mongoose](https://mongoosejs.com/) - MongoDB ODM
-- [Passport](http://www.passportjs.org/) - Authentication
+- [Passport.js](http://www.passportjs.org/) - Authentication
 - [Stripe](https://stripe.com/) - Payment processing
 - [Firebase](https://firebase.google.com/) - Push notifications
 - [Bull](https://github.com/OptimalBits/bull) - Queue processing

@@ -12,8 +12,8 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '..', '.env.test') });
 
-import { generateLogSummary } from '../src/services/logReport.service';
-import { generateEmailTemplate } from '../src/services/emailReport.service';
+import { generateLogSummary } from '../src/services/logReport.service.ts';
+import { generateEmailTemplate } from '../src/services/emailReport.service.ts';
 
 console.log('📧 Testing Email Report Generation with Sample Logs\n');
 console.log('='.repeat(60));

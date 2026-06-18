@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync';
-import ApiError from '../utils/ApiError';
-import response from '../config/response';
-import logger from '../config/logger';
-import { authService, userService, tokenService, emailService } from '../services/index';
-import { deleteFirebaseUser, syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service';
-import { Activity } from '../models/index';
-import type { ActivityType } from '../models/activity.model';
+import catchAsync from '../utils/catchAsync.ts';
+import ApiError from '../utils/ApiError.ts';
+import response from '../config/response.ts';
+import logger from '../config/logger.ts';
+import { authService, userService, tokenService, emailService } from '../services/index.ts';
+import { deleteFirebaseUser, syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service.ts';
+import { Activity } from '../models/index.ts';
+import type { ActivityType } from '../models/activity.model.ts';
 import type {
   ChangePasswordBody,
   DeleteMeBody,
@@ -16,7 +16,7 @@ import type {
   RegisterBody,
   ResetPasswordBody,
   VerifyEmailBody,
-} from '../types/auth';
+} from '../types/auth.ts';
 
 type EmptyParams = Record<string, never>;
 type EmptyQuery = Record<string, never>;

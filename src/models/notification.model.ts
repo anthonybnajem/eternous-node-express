@@ -1,6 +1,6 @@
 import mongoose, { type HydratedDocument, type Model, type Types } from 'mongoose';
-import { paginate } from './plugins/index';
-import type { PaginateModel } from '../types/common';
+import { paginate } from './plugins/index.ts';
+import type { PaginateModel } from '../types/common.ts';
 
 export type NotificationRole = 'admin' | 'client' | 'employee' | 'unknown';
 export type NotificationType = 'task' | 'payment' | 'unknown';

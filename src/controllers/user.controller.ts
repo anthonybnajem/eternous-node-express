@@ -1,11 +1,11 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync';
-import * as userService from '../services/user.service';
-import pick from '../utils/pick';
-import logger from '../config/logger';
-import { Activity } from '../models/index';
-import type { ActivityType } from '../models/activity.model';
+import catchAsync from '../utils/catchAsync.ts';
+import * as userService from '../services/user.service.ts';
+import pick from '../utils/pick.ts';
+import logger from '../config/logger.ts';
+import { Activity } from '../models/index.ts';
+import type { ActivityType } from '../models/activity.model.ts';
 
 type UserIdParams = { userId: string };
 type NidBody = { nidNumber: string };

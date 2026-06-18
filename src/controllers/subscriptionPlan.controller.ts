@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync';
-import response from '../config/response';
-import { subscriptionPlanService } from '../services/index';
-import type { SubscriptionPlanAttrs } from '../models/subscriptionPlan.model';
-import ApiError from '../utils/ApiError';
+import catchAsync from '../utils/catchAsync.ts';
+import response from '../config/response.ts';
+import { subscriptionPlanService } from '../services/index.ts';
+import type { SubscriptionPlanAttrs } from '../models/subscriptionPlan.model.ts';
+import ApiError from '../utils/ApiError.ts';
 
 type EmptyParams = Record<string, never>;
 type EmptyQuery = Record<string, never>;

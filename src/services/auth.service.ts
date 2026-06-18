@@ -1,12 +1,12 @@
 import httpStatus from 'http-status';
-import * as tokenService from './token.service';
-import * as userService from './user.service';
-import Token from '../models/token.model';
-import type { UserDocument } from '../models/user.model';
-import ApiError from '../utils/ApiError';
-import { tokenTypes } from '../config/tokens';
-import type { AuthTokens, ChangePasswordBody, VerifyEmailBody } from '../types/auth';
-import type { ObjectIdLike } from '../types/common';
+import * as tokenService from './token.service.ts';
+import * as userService from './user.service.ts';
+import Token from '../models/token.model.ts';
+import type { UserDocument } from '../models/user.model.ts';
+import ApiError from '../utils/ApiError.ts';
+import { tokenTypes } from '../config/tokens.ts';
+import type { AuthTokens, ChangePasswordBody, VerifyEmailBody } from '../types/auth.ts';
+import type { ObjectIdLike } from '../types/common.ts';
 
 const loginUserWithEmailAndPassword = async (email: string, password: string): Promise<UserDocument> => {
   const user = await userService.getUserByEmail(email);

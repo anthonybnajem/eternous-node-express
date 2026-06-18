@@ -1,4 +1,4 @@
-# Contributing to Node Backend Template
+# Contributing to Node.js Backend Template
 
 Thank you for your interest in contributing to this project! We welcome contributions from the community.
 
@@ -36,7 +36,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ### Prerequisites
 
-- Node v18+ (v21.7.1 recommended)
+- Node.js v18+ (v21.7.1 recommended)
 - MongoDB v7.0+
 - Redis v6.0+
 - npm or yarn
@@ -131,7 +131,7 @@ nodejs-backend-template/
 ### JavaScript/ES6+
 
 - Use ES6+ features (arrow functions, destructuring, async/await)
-- Use ESM (ES Modules) syntax with `` extensions
+- Use ESM (ES Modules) syntax with `.js` extensions
 - Follow the existing code style (enforced by ESLint)
 - Use meaningful variable and function names
 - Keep functions small and focused (single responsibility)
@@ -164,8 +164,8 @@ export default {
 export { createUser, getUser };
 
 // Good - Imports
-import userService from './services/user.service';
-import { createUser } from './services/user.service';
+import userService from './services/user.service.js';
+import { createUser } from './services/user.service.js';
 ```
 
 ## Commit Guidelines

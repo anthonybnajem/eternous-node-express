@@ -1,4 +1,4 @@
-import type { ApiResponsePayload } from '../types/common';
+import type { ApiResponsePayload } from '../types/common.ts';
 
 interface NormalizedResponse<T = unknown> {
   code?: number | string;

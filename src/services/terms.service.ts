@@ -1,5 +1,5 @@
-import { Terms } from '../models/index';
-import type { TermsAttrs, TermsDocument } from '../models/terms.model';
+import { Terms } from '../models/index.ts';
+import type { TermsAttrs, TermsDocument } from '../models/terms.model.ts';
 
 const createTerms = async (termsBody: TermsAttrs): Promise<TermsDocument> => {
   const existingTerms = await Terms.findOne();

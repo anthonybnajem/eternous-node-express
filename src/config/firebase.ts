@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
-import config from './config';
-import logger from './logger';
+import config from './config.ts';
+import logger from './logger.ts';
 
 let firebaseApp: admin.app.App | null = null;
 

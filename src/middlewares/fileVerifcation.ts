@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
-import logger from '../config/logger';
-import response from '../config/response';
+import logger from '../config/logger.ts';
+import response from '../config/response.ts';
 
 const imageVerification = (req: Request, res: Response, next: NextFunction): void => {
   const files = Array.isArray(req.files) ? req.files : [];

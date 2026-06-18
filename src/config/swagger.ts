@@ -1,14 +1,14 @@
 import type { Express, Request, Response } from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import config from './config';
+import config from './config.ts';
 
 const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
-    title: 'Node Backend Template API',
+    title: 'Node.js Backend Template API',
     version: '1.0.0',
-    description: 'Professional, universal, production-ready Node backend template with comprehensive API documentation',
+    description: 'Professional, universal, production-ready Node.js backend template with comprehensive API documentation',
     license: {
       name: 'MIT',
       url: 'https://opensource.org/licenses/MIT',

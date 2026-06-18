@@ -1,11 +1,11 @@
 import type { Request, Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync';
-import response from '../config/response';
-import { subscriptionPlanService, subscriptionService } from '../services/index';
-import type { SubscriptionProvider, SubscriptionStatus } from '../models/subscription.model';
-import ApiError from '../utils/ApiError';
-import * as stripeService from '../services/payments/stripe.service';
+import catchAsync from '../utils/catchAsync.ts';
+import response from '../config/response.ts';
+import { subscriptionPlanService, subscriptionService } from '../services/index.ts';
+import type { SubscriptionProvider, SubscriptionStatus } from '../models/subscription.model.ts';
+import ApiError from '../utils/ApiError.ts';
+import * as stripeService from '../services/payments/stripe.service.ts';
 
 type EmptyParams = Record<string, never>;
 type EmptyQuery = Record<string, never>;

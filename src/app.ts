@@ -6,15 +6,17 @@ import compression from 'compression';
 import cors from 'cors';
 import passport from 'passport';
 import httpStatus from 'http-status';
-import config from './config/config';
-import { successHandler, errorHandler } from './config/morgan';
-import { jwtStrategy } from './config/passport';
-import authLimiter from './middlewares/rateLimiter';
-import routes from './routes/v1/index';
-import { errorConverter, errorHandler as errorHandlerMiddleware } from './middlewares/error';
-import ApiError from './utils/ApiError';
-import { setupSwagger } from './config/swagger';
-import { metricsMiddleware, register } from './config/metrics';
+import config from './config/config.ts';
+import { successHandler, errorHandler } from './config/morgan.ts';
+import { jwtStrategy } from './config/passport.ts';
+import authLimiter from './middlewares/rateLimiter.ts';
+import routes from './routes/v1/index.ts';
+import { errorConverter, errorHandler as errorHandlerMiddleware } from './middlewares/error.ts';
+import ApiError from './utils/ApiError.ts';
+import { setupSwagger } from './config/swagger.ts';
+import { metricsMiddleware, register } from './config/metrics.ts';
+import { handleWebhook } from './controllers/payment.controller.ts';
+
 
 const app = express();
 
@@ -29,6 +31,13 @@ app.use(metricsMiddleware);
 
 // Static files
 app.use(express.static('public'));
+
+// Stripe webhook must receive raw body before JSON parser
+app.post(
+  '/api/v1/payments/webhook',
+  express.raw({ type: 'application/json' }),
+  handleWebhook
+);
 
 app.get('/firebase-config', (_req: Request, res: Response): void => {
   const firebaseWebConfig = {
@@ -45,15 +54,6 @@ app.get('/firebase-config', (_req: Request, res: Response): void => {
 
 // Set security HTTP headers
 app.use(helmet());
-
-// Parse json request body
-
-
-// Stripe webhook must receive raw body before JSON parser
-app.use(
-  '/api/v1/payments/webhook',
-  express.raw({ type: 'application/json' })
-);
 
 // Parse json request body
 app.use(express.json());

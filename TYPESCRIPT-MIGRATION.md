@@ -1,6 +1,6 @@
 # TypeScript Migration Notes
 
-This version is not only a `` → `.ts` rename. It includes a real TypeScript typing pass across the backend.
+This version is not only a `.js` → `.ts` rename. It includes a real TypeScript typing pass across the backend.
 
 ## What was typed
 

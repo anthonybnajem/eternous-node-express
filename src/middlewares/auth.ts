@@ -1,15 +1,15 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import httpStatus from 'http-status';
 import jwt from 'jsonwebtoken';
-import ApiError from '../utils/ApiError';
-import config from '../config/config';
-import { roleRights, type Permission, type Role } from '../config/roles';
-import { tokenTypes } from '../config/tokens';
-import { Token } from '../models/index';
-import User from '../models/user.model';
-import type { AuthTokenPayload } from '../types/auth';
-import type { UserDocument } from '../models/user.model';
-import { syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service';
+import ApiError from '../utils/ApiError.ts';
+import config from '../config/config.ts';
+import { roleRights, type Permission, type Role } from '../config/roles.ts';
+import { tokenTypes } from '../config/tokens.ts';
+import { Token } from '../models/index.ts';
+import User from '../models/user.model.ts';
+import type { AuthTokenPayload } from '../types/auth.ts';
+import type { UserDocument } from '../models/user.model.ts';
+import { syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service.ts';
 
 const extractBearerToken = (req: Request): string | null => {
   const authHeader = req.headers.authorization;

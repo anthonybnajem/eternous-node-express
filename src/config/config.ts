@@ -138,7 +138,7 @@ const config = {
       : [],
     timezone: envVars.LOG_REPORT_TIMEZONE,
   },
-  name: 'Node Backend Boilerplate',
+  name: 'Node.js Backend Boilerplate',
 };
 
 export default config;

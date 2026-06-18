@@ -1,13 +1,13 @@
 import express from 'express';
-import authRoute from './auth.routes';
-import userRoute from './user.routes';
-import subscriptionRoute from './subscription.routes';
-import subscriptionPlanRoute from './subscription-plan.routes';
-import paymentRoute from './payment.routes';
-import notificationRoute from './notification.routes';
-import termsRoute from './terms.routes';
-import privacyRoute from './privacy.routes';
-import aboutRoute from './about.routes';
+import authRoute from './auth.routes.ts';
+import userRoute from './user.routes.ts';
+import subscriptionRoute from './subscription.routes.ts';
+import subscriptionPlanRoute from './subscription-plan.routes.ts';
+import paymentRoute from './payment.routes.ts';
+import notificationRoute from './notification.routes.ts';
+import termsRoute from './terms.routes.ts';
+import privacyRoute from './privacy.routes.ts';
+import aboutRoute from './about.routes.ts';
 
 const router = express.Router();
 

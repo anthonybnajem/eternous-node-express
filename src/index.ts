@@ -1,14 +1,14 @@
 import type { Server } from 'http';
-import app from './app';
-import config from './config/config';
-import logger from './config/logger';
-import { connectDB, closeDB } from './config/database';
-import { closeRedis } from './config/redis';
-import { closeQueues } from './queues/index';
-import { startLogReportScheduler, startLogCleanupScheduler, stopAllSchedulers } from './config/scheduler';
+import app from './app.ts';
+import config from './config/config.ts';
+import logger from './config/logger.ts';
+import { connectDB, closeDB } from './config/database.ts';
+import { closeRedis } from './config/redis.ts';
+import { closeQueues } from './queues/index.ts';
+import { startLogReportScheduler, startLogCleanupScheduler, stopAllSchedulers } from './config/scheduler.ts';
 
-import './queues/processors/email.processor';
-import './queues/processors/notification.processor';
+import './queues/processors/email.processor.js';
+import './queues/processors/notification.processor.js';
 
 let server: Server | undefined;
 

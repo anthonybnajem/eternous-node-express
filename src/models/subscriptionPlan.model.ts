@@ -1,5 +1,5 @@
 import mongoose, { type HydratedDocument } from 'mongoose';
-import { toJSON } from './plugins/index';
+import { toJSON } from './plugins/index.ts';
 
 export type SubscriptionBillingInterval = 'day' | 'week' | 'month' | 'year' | 'one_time';
 

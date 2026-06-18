@@ -1,9 +1,9 @@
 import mongoose, { type HydratedDocument, type Model, type Types } from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcryptjs';
-import { toJSON, paginate } from './plugins/index';
-import { roles } from '../config/roles';
-import type { PaginateModel, UploadedFileInfo } from '../types/common';
+import { toJSON, paginate } from './plugins/index.ts';
+import { roles } from '../config/roles.ts';
+import type { PaginateModel, UploadedFileInfo } from '../types/common.ts';
 
 export type AuthProvider = 'email' | 'firebase' | 'google' | 'facebook' | 'apple';
 

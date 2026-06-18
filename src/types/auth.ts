@@ -1,5 +1,5 @@
-import type { ObjectIdLike } from './common';
-import type { UserDocument } from '../models/user.model';
+import type { ObjectIdLike } from './common.ts';
+import type { UserDocument } from '../models/user.model.ts';
 
 export interface RegisterBody {
   fullName?: string;

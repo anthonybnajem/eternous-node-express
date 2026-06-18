@@ -1,9 +1,9 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
-import catchAsync from '../utils/catchAsync';
-import response from '../config/response';
-import { termsService } from '../services/index';
-import type { TermsAttrs } from '../models/terms.model';
+import catchAsync from '../utils/catchAsync.ts';
+import response from '../config/response.ts';
+import { termsService } from '../services/index.ts';
+import type { TermsAttrs } from '../models/terms.model.ts';
 
 const createTerms = catchAsync<Record<string, never>, unknown, TermsAttrs>(async (req, res: Response): Promise<void> => {
   const terms = await termsService.createTerms(req.body);

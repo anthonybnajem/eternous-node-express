@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', '.env.test') });
 
 import cron from 'node-cron';
-import { SCHEDULE_PATTERNS, getAvailableSchedules, getSchedulerStatus } from '../src/config/scheduler';
+import { SCHEDULE_PATTERNS, getAvailableSchedules, getSchedulerStatus } from '../src/config/scheduler.ts';
 
 console.log('⏰ Testing Scheduler Functionality\n');
 console.log('='.repeat(60));

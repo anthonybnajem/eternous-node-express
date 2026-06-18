@@ -9,7 +9,7 @@
 
 ```
 Error [ERR_MODULE_NOT_FOUND]: Cannot find module
-'/Users/sahinur/Desktop/nodejs-backend-template-main/src/controllers/user.controller'
+'/Users/sahinur/Desktop/nodejs-backend-template-main/src/controllers/user.controller.js'
 ```
 
 The application was missing several controllers and models that were referenced in routes but not created.
@@ -20,7 +20,7 @@ The application was missing several controllers and models that were referenced 
 
 ### Controllers (2 files)
 
-#### 1. `src/controllers/user.controller`
+#### 1. `src/controllers/user.controller.js`
 
 **Methods implemented:**
 
@@ -35,7 +35,7 @@ The application was missing several controllers and models that were referenced 
 
 **Lines**: 108
 
-#### 2. `src/controllers/activity.controller`
+#### 2. `src/controllers/activity.controller.js`
 
 **Methods implemented:**
 
@@ -46,20 +46,20 @@ The application was missing several controllers and models that were referenced 
 
 ### Models (8 files)
 
-#### 1. `src/models/activity.model`
+#### 1. `src/models/activity.model.js`
 
 User activity tracking system with fields:
 
 - user, type, description, ipAddress, userAgent, metadata
 - Types: login, logout, register, update_profile, password_change, order_placed, payment, other
 
-#### 2. `src/models/interest.model`
+#### 2. `src/models/interest.model.js`
 
 User interests catalog:
 
 - name, description, icon, isActive
 
-#### 3. `src/models/payment.model`
+#### 3. `src/models/payment.model.js`
 
 Payment transaction records:
 
@@ -67,27 +67,27 @@ Payment transaction records:
 - Methods: stripe, paypal, card, cash
 - Status: pending, processing, succeeded, failed, refunded
 
-#### 4. `src/models/referral.model`
+#### 4. `src/models/referral.model.js`
 
 Referral system:
 
 - referrer, referred, status, reward
 - Status: pending, active, completed
 
-#### 5. `src/models/service.model`
+#### 5. `src/models/service.model.js`
 
 Service catalog:
 
 - name, description, price, category, isActive
 
-#### 6. `src/models/submitTask.model`
+#### 6. `src/models/submitTask.model.js`
 
 Task submission tracking:
 
 - task, user, submission, files, status, feedback, reviewedBy, reviewedAt
 - Status: submitted, under_review, approved, rejected
 
-#### 7. `src/models/tasks.model`
+#### 7. `src/models/tasks.model.js`
 
 Task management:
 
@@ -95,7 +95,7 @@ Task management:
 - Status: pending, in-progress, completed, cancelled
 - Priority: low, medium, high
 
-#### 8. `src/models/withdrawal.model`
+#### 8. `src/models/withdrawal.model.js`
 
 Withdrawal requests:
 
@@ -110,16 +110,16 @@ Withdrawal requests:
 Added exports for all new models:
 
 ```javascript
-export { default as Activity } from './activity.model';
-export { default as Interest } from './interest.model';
-export { default as Payment } from './payment.model';
-export { default as Referral } from './referral.model';
-export { default as Service } from './service.model';
-export { default as SubmitTask } from './submitTask.model';
-export { default as Tasks } from './tasks.model';
-export { default as Withdrawal } from './withdrawal.model';
-export { default as Product } from './product.model';
-export { default as Order } from './order.model';
+export { default as Activity } from './activity.model.js';
+export { default as Interest } from './interest.model.js';
+export { default as Payment } from './payment.model.js';
+export { default as Referral } from './referral.model.js';
+export { default as Service } from './service.model.js';
+export { default as SubmitTask } from './submitTask.model.js';
+export { default as Tasks } from './tasks.model.js';
+export { default as Withdrawal } from './withdrawal.model.js';
+export { default as Product } from './product.model.js';
+export { default as Order } from './order.model.js';
 ```
 
 ---

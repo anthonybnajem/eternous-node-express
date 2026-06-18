@@ -1,6 +1,6 @@
 import mongoose, { type HydratedDocument, type Model, type Types } from 'mongoose';
-import { toJSON, paginate } from './plugins/index';
-import type { PaginateModel } from '../types/common';
+import { toJSON, paginate } from './plugins/index.ts';
+import type { PaginateModel } from '../types/common.ts';
 
 export type PaymentMethod = 'stripe' | 'paypal' | 'card' | 'cash';
 export type PaymentStatus = 'pending' | 'processing' | 'succeeded' | 'failed' | 'refunded';

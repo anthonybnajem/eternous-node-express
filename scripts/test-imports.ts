@@ -20,62 +20,62 @@ let success = 0;
 
 console.log('\n📦 Importing main app module...');
 try {
-  await import('../src/app');
+  await import('../src/app.ts');
   console.log('✅ App module loaded successfully');
   success++;
 } catch (error) {
   console.error('❌ Failed to load app module:', error instanceof Error ? error.message : error);
-  errors.push({ module: 'src/app', error: error instanceof Error ? error.message : String(error) });
+  errors.push({ module: 'src/app.js', error: error instanceof Error ? error.message : String(error) });
 }
 
 console.log('\n⚙️  Importing config module...');
 try {
-  await import('../src/config/config');
+  await import('../src/config/config.ts');
   console.log('✅ Config module loaded successfully');
   success++;
 } catch (error) {
   console.error('❌ Failed to load config module:', error instanceof Error ? error.message : error);
-  errors.push({ module: 'src/config/config', error: error instanceof Error ? error.message : String(error) });
+  errors.push({ module: 'src/config/config.js', error: error instanceof Error ? error.message : String(error) });
 }
 
 console.log('\n⏰ Importing scheduler module...');
 try {
-  await import('../src/config/scheduler');
+  await import('../src/config/scheduler.ts');
   console.log('✅ Scheduler module loaded successfully');
   success++;
 } catch (error) {
   console.error('❌ Failed to load scheduler module:', error instanceof Error ? error.message : error);
-  errors.push({ module: 'src/config/scheduler', error: error instanceof Error ? error.message : String(error) });
+  errors.push({ module: 'src/config/scheduler.js', error: error instanceof Error ? error.message : String(error) });
 }
 
 console.log('\n🔧 Importing services...');
 try {
-  await import('../src/services/index');
+  await import('../src/services/index.ts');
   console.log('✅ All services loaded successfully');
   success++;
 } catch (error) {
   console.error('❌ Failed to load services:', error instanceof Error ? error.message : error);
-  errors.push({ module: 'src/services/index', error: error instanceof Error ? error.message : String(error) });
+  errors.push({ module: 'src/services/index.js', error: error instanceof Error ? error.message : String(error) });
 }
 
 console.log('\n📊 Importing models...');
 try {
-  await import('../src/models/index');
+  await import('../src/models/index.ts');
   console.log('✅ All models loaded successfully');
   success++;
 } catch (error) {
   console.error('❌ Failed to load models:', error instanceof Error ? error.message : error);
-  errors.push({ module: 'src/models/index', error: error instanceof Error ? error.message : String(error) });
+  errors.push({ module: 'src/models/index.js', error: error instanceof Error ? error.message : String(error) });
 }
 
 console.log('\n🛣️  Importing routes...');
 try {
-  await import('../src/routes/v1/index');
+  await import('../src/routes/v1/index.ts');
   console.log('✅ All routes loaded successfully');
   success++;
 } catch (error) {
   console.error('❌ Failed to load routes:', error instanceof Error ? error.message : error);
-  errors.push({ module: 'src/routes/v1/index', error: error instanceof Error ? error.message : String(error) });
+  errors.push({ module: 'src/routes/v1/index.js', error: error instanceof Error ? error.message : String(error) });
 }
 
 console.log('\n' + '='.repeat(60));

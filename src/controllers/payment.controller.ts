@@ -1,11 +1,11 @@
 import type { Response } from 'express';
 import httpStatus from 'http-status';
 import type Stripe from 'stripe';
-import catchAsync from '../utils/catchAsync';
-import * as stripeService from '../services/payments/stripe.service';
-import logger from '../config/logger';
-import { Activity } from '../models/index';
-import type { ActivityType } from '../models/activity.model';
+import catchAsync from '../utils/catchAsync.ts';
+import * as stripeService from '../services/payments/stripe.service.ts';
+import logger from '../config/logger.ts';
+import { Activity } from '../models/index.ts';
+import type { ActivityType } from '../models/activity.model.ts';
 import type { Request } from 'express';
 
 type PaymentIntentBody = { amount: number; currency?: string; metadata?: Record<string, string> };
@@ -80,6 +80,8 @@ const handleWebhook = catchAsync(async (req, res: Response): Promise<void> => {
     res.status(httpStatus.BAD_REQUEST).send({ message: 'Missing Stripe signature' });
     return;
   }
+
+  console.log({bufferBool:!Buffer.isBuffer(req.body)})
 
   if (!Buffer.isBuffer(req.body)) {
     logger.error(`Stripe webhook body is not Buffer. Type: ${typeof req.body}`);

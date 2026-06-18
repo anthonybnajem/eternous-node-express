@@ -1,8 +1,8 @@
 import httpStatus from 'http-status';
 import type { DecodedIdToken } from 'firebase-admin/auth';
-import initializeFirebaseApp from '../config/firebase';
-import ApiError from '../utils/ApiError';
-import User, { type AuthProvider, type UserDocument } from '../models/user.model';
+import initializeFirebaseApp from '../config/firebase.ts';
+import ApiError from '../utils/ApiError.ts';
+import User, { type AuthProvider, type UserDocument } from '../models/user.model.ts';
 
 const mapFirebaseProvider = (provider?: string): AuthProvider => {
   switch (provider) {
