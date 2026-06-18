@@ -4,6 +4,7 @@ This folder is the canonical place for project requirements, setup prerequisites
 
 ## Contents
 
+- `IMPLEMENTATION-TODOS.md` - full backlog; **Project rules: no code refactor, no flow refactor**
 - `backend.md` - runtime and local development requirements
 - `auth.md` - Firebase and legacy auth requirements
 - `infrastructure.md` - MongoDB, Redis, Docker, and deployment requirements
