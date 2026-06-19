@@ -66,8 +66,9 @@ api_auth_json() {
 api_auth() {
   local method="$1"
   local path="$2"
+  shift 2
   [[ -n "$TOKEN" ]] || fail "TOKEN not set — login first"
-  api "$method" "$path" -H "Authorization: Bearer ${TOKEN}"
+  api "$method" "$path" -H "Authorization: Bearer ${TOKEN}" "$@"
 }
 
 assert_http() {

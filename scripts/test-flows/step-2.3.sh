@@ -2,22 +2,23 @@
 source "$(dirname "$0")/lib.sh"
 ensure_verified_user_session
 
-MEMBER_ID="${MEMBER_ID:-}"
-if [[ -z "$MEMBER_ID" ]]; then
-  bash "$(dirname "$0")/step-2.2.sh" >/dev/null 2>&1 || true
-  # Re-run minimal chain or require env
-  step "need MEMBER_ID — run step-2.2 first or set MEMBER_ID"
-  api_auth GET /trees
-  [[ "$LAST_HTTP_CODE" == "200" ]] || expect_not_implemented "$LAST_HTTP_CODE"
-  TREE_ID="$(extract '.data.attributes.results[0].id // .data.attributes.trees[0].id // empty')"
-  [[ -n "$TREE_ID" ]] || { expect_not_implemented 404; exit 0; }
-  api_auth GET "/trees/${TREE_ID}/members"
-  MEMBER_ID="$(extract '.data.attributes.results[0].id // .data.attributes.members[0].id')"
-fi
+step "GET /member-relation-types"
+api GET /member-relation-types
+TYPE_ID="$(extract '.data.attributes[0].id // .data[0].id')"
+
+step "POST /trees (for voice test)"
+api_auth_json POST /trees '{"name":"Voice Flow Tree"}'
+[[ "$LAST_HTTP_CODE" == "201" ]] || fail "create tree failed (HTTP $LAST_HTTP_CODE)"
+TREE_ID="$(extract '.data.attributes.tree.id // .data.attributes.id')"
+
+step "POST /trees/${TREE_ID}/members"
+api_auth_json POST "/trees/${TREE_ID}/members" "{\"name\":\"Grandma\",\"memberRelationTypeId\":\"${TYPE_ID}\",\"biography\":\"Voice test\"}"
+[[ "$LAST_HTTP_CODE" == "201" ]] || fail "create member failed (HTTP $LAST_HTTP_CODE)"
+MEMBER_ID="$(extract '.data.attributes.member.id // .data.attributes.id')"
 
 step "GET /members/${MEMBER_ID}/voices"
 api_auth GET "/members/${MEMBER_ID}/voices"
-if [[ "$LAST_HTTP_CODE" != "200" ]]; then expect_not_implemented "$LAST_HTTP_CODE"; fi
+[[ "$LAST_HTTP_CODE" == "200" ]] && pass "list voices ok" || fail "GET voices failed (HTTP $LAST_HTTP_CODE)"
 
 if [[ -f "${VOICE_SAMPLE_FILE:-}" ]]; then
   step "POST /members/${MEMBER_ID}/voices (upload)"
@@ -27,7 +28,9 @@ if [[ -f "${VOICE_SAMPLE_FILE:-}" ]]; then
   step "PATCH default voice"
   api_auth_json PATCH "/members/${MEMBER_ID}/voices/${VOICE_ID}/default" '{}'
   assert_http 200
+  pass "voice upload + default ok"
 else
   echo "SKIP: set VOICE_SAMPLE_FILE=/path/to/sample.wav to test upload"
 fi
+
 pass "step 2.3 flow complete"

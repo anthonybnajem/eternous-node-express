@@ -502,12 +502,13 @@ Script: `scripts/test-flows/step-1.5.sh` — chains API calls; passes `TOKEN`, i
 - [x] `member.model.ts` — dateOfBirth, privateNotes, isRelatedMember, defaultVoiceId, indexes
 
 ### Services
-- [ ] `member.service.ts` — `getFavoriteMembers(userId)`
-- [ ] `member.service.ts` — `getRecentlyUsedMembers(userId, limit)`
-- [ ] `member.service.ts` — `touchMemberUsed(memberId)` — called when user chats/listens
+- [x] `member.service.ts` — `getFavoriteMembers(userId)`
+- [x] `member.service.ts` — `getRecentlyUsedMembers(userId, limit)`
+- [x] `member.service.ts` — `touchMemberUsed(memberId)` — for chat/listen (Phase 6)
+- [x] `home.service.ts` — aggregate favorites + recent
 
 ### Controllers
-- [ ] `home.controller.ts` — aggregate favorites + recent in one response
+- [x] `home.controller.ts` — aggregate favorites + recent in one response
 
 ### Routes / APIs
 
@@ -515,15 +516,16 @@ Script: `scripts/test-flows/step-1.5.sh` — chains API calls; passes `TOKEN`, i
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| GET | `/home` | User | [ ] | `{ favorites, recentlyUsed }` |
-| PATCH | `/members/:memberId/favorite` | User | [ ] | Toggle favorite (own member) |
+| GET | `/home` | User | [x] | `{ favorites, recentlyUsed }` |
+| PATCH | `/members/:memberId/favorite` | User | [x] | Toggle favorite (own member) |
 
-#### Step 2.4 — Home endpoint
+#### Step 2.4 — Home endpoint ✅ DONE
 
 **Commit:** `feat(home): add favorites and recently used members`
 
 **Test:**
 ```bash
+npm run typecheck
 export BASE=http://localhost:3000/api/v1 TOKEN=<access_token>
 
 curl -X PATCH $BASE/members/<memberId>/favorite -H "Authorization: Bearer $TOKEN" \
@@ -617,24 +619,25 @@ Script: `scripts/test-flows/step-2.1.sh` — chains API calls; passes `TOKEN`, i
 > Inside a tree. Photo, name, DOB, bio, custom greeting, relation, nickname, “not a related member” flag, voice upload on create.
 
 ### DB
-- [ ] `Member`: add `dateOfBirth`, `privateNotes`, `isRelatedMember` (boolean, default true)
-- [ ] `Member.relatedToMemberId` — optional graph link
-- [ ] `Member.memberRelationTypeId` — ref MemberRelationType
-- [ ] `Member.defaultVoiceId` — ref Voice
-- [ ] Index: `{ treeId: 1 }`, `{ userId: 1, treeId: 1 }`
+- [x] `Member`: `dateOfBirth`, `privateNotes`, `isRelatedMember` (boolean, default true)
+- [x] `Member.relatedToMemberId` — optional graph link
+- [x] `Member.memberRelationTypeId` — ref MemberRelationType
+- [x] `Member.defaultVoiceId` — ref Voice
+- [x] Index: `{ treeId: 1 }`, `{ userId: 1, treeId: 1 }`
 
 ### Models
-- [~] `member.model.ts` — add missing fields; align naming
-- [~] `memberRelationType.model.ts` — seed data
+- [x] `member.model.ts` — fields aligned
+- [x] `memberRelationType.model.ts` — seed data (`npm run seed:relation-types`)
 
 ### Services
-- [ ] `member.service.ts` — CRUD scoped to `userId` + `treeId`
-- [ ] `member.service.ts` — create with optional photo + initial voice upload (creates Voice v1)
-- [ ] `member.service.ts` — `getMemberDetails` returns: name, relationType, biography, privateNotes, voices summary, default voice
-- [ ] `memberRelationType.service.ts` — list active types
+- [x] `member.service.ts` — CRUD scoped to `userId` + `treeId`
+- [x] `member.service.ts` — create with optional photo + initial voice upload (creates Voice v1)
+- [x] `member.service.ts` — `getMemberDetails` returns relationType, voices summary, defaultVoiceId
+- [x] `memberRelationType.service.ts` — list active types
 
 ### Controllers
-- [ ] `member.controller.ts`
+- [x] `member.controller.ts`
+- [x] `memberRelationType.controller.ts` — public list
 
 ### Routes / APIs
 
@@ -642,29 +645,31 @@ Script: `scripts/test-flows/step-2.1.sh` — chains API calls; passes `TOKEN`, i
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| GET | `/trees/:treeId/members` | User | [ ] | List members in own tree |
-| POST | `/trees/:treeId/members` | User | [ ] | Multipart: photo?, voice? |
-| GET | `/members/:memberId` | User | [ ] | Full details (own) |
-| PATCH | `/members/:memberId` | User | [ ] | Update + photo |
-| DELETE | `/members/:memberId` | User | [ ] | Delete + file cleanup |
-| GET | `/member-relation-types` | Public | [ ] | Father, son, etc. |
+| GET | `/trees/:treeId/members` | User | [x] | List members in own tree |
+| POST | `/trees/:treeId/members` | User | [x] | Multipart: photo?, voice? |
+| GET | `/members/:memberId` | User | [x] | Full details (own) |
+| PATCH | `/members/:memberId` | User | [x] | Update + photo |
+| DELETE | `/members/:memberId` | User | [x] | Delete + voice docs |
+| PATCH | `/members/:memberId/favorite` | User | [x] | Toggle `isFavorite` |
+| GET | `/member-relation-types` | Public | [x] | Father, son, etc. (13 types) |
 
 **Dashboard:**
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| POST | `/member-relation-types` | Dashboard | [ ] | `auth('manageUsers')` — new route on existing router pattern |
+| POST | `/member-relation-types` | Dashboard | [ ] | `auth('manageUsers')` — Step 6+ |
 | PATCH | `/member-relation-types/:id` | Dashboard | [ ] | `auth('manageUsers')` |
 
 ### Validations
-- [ ] `member.validation.ts`
+- [x] `member.validation.ts`
 
-#### Step 2.2 — Members CRUD + relation types
+#### Step 2.2 — Members CRUD + relation types ✅ DONE
 
 **Commit:** `feat(members): add member CRUD and relation type list`
 
 **Test:**
 ```bash
+npm run typecheck
 npm run seed:relation-types   # once, needs MongoDB
 export BASE=http://localhost:3000/api/v1 TOKEN=<access_token> TREE=<treeId>
 
@@ -697,42 +702,43 @@ Script: `scripts/test-flows/step-2.2.sh` — chains API calls; passes `TOKEN`, i
 > Multiple versions per member; select default for cloning. Upload new version. External clone API is another project.
 
 ### DB
-- [ ] `Voice`: unique `{ memberId, versionNumber }`
-- [ ] `Voice.status`: processing | ready | failed | archived
-- [ ] `Voice`: `name` (e.g. "Version 1.0"), `uploadUrl`, `voiceUrl`, `size`, `duration`, `isDefault`
+- [x] `Voice`: unique `{ memberId, versionNumber }`
+- [x] `Voice.status`: processing | ready | failed | archived
+- [x] `Voice`: `name`, `uploadUrl`, `voiceUrl`, `size`, `duration`, `isDefault`
 
 ### Models
-- [~] `voice.model.ts` — exists with version logic
+- [x] `voice.model.ts` — version logic + indexes
 
 ### Services
-- [ ] `voice.service.ts` — `uploadVoice(memberId, file)` → auto-increment `versionNumber`
-- [ ] `voice.service.ts` — `listVoices(memberId)`, `setDefaultVoice(memberId, voiceId)`
-- [ ] `voice.service.ts` — voice selection for chat: voiceId → versionNumber → default → latest ready
-- [ ] `voice.service.ts` — update `Member.defaultVoiceId` when default changes
-- [ ] Storage: track file size for user storage quota
-- [ ] Webhook or poll endpoint for external clone service to set `status: ready` + `voiceUrl` (optional integration stub)
+- [x] `voice.service.ts` — `uploadVoice(memberId, file)` → auto-increment `versionNumber`
+- [x] `voice.service.ts` — `listVoices(memberId)`, `setDefaultVoice(memberId, voiceId)`
+- [x] `voice.service.ts` — `resolveVoiceForChat` (voiceId → versionNumber → default → latest ready)
+- [x] `voice.service.ts` — update `Member.defaultVoiceId` when default changes
+- [~] Storage: track file size for user storage quota (size stored; quota enforcement Phase 3+)
+- [ ] Webhook or poll endpoint for external clone service (optional stub — Phase 6)
 
 ### Controllers
-- [ ] `voice.controller.ts`
+- [x] `voice.controller.ts`
 
 ### Routes / APIs
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| GET | `/members/:memberId/voices` | [ ] | All versions |
-| POST | `/members/:memberId/voices` | [ ] | Upload new version (multipart) |
-| PATCH | `/members/:memberId/voices/:voiceId/default` | [ ] | Set default |
-| GET | `/members/:memberId/voices/:voiceId` | [ ] | Single version metadata |
-| DELETE | `/members/:memberId/voices/:voiceId` | [ ] | Archive/delete |
+| GET | `/members/:memberId/voices` | [x] | All versions |
+| POST | `/members/:memberId/voices` | [x] | Upload new version (multipart `file`) |
+| PATCH | `/members/:memberId/voices/:voiceId/default` | [x] | Set default |
+| GET | `/members/:memberId/voices/:voiceId` | [x] | Single version metadata |
+| DELETE | `/members/:memberId/voices/:voiceId` | [x] | Archive voice |
 
 ### Validations
-- [ ] `voice.validation.ts`
+- [x] `voice.validation.ts`
 
-#### Step 2.3 — Voice versions upload + default
+#### Step 2.3 — Voice versions upload + default ✅ DONE
 
 **Commit:** `feat(voices): add voice upload, list, and default selection`
 
 **Test:**
 ```bash
+npm run typecheck
 export BASE=http://localhost:3000/api/v1 TOKEN=<access_token> MEMBER=<memberId>
 
 curl -H "Authorization: Bearer $TOKEN" $BASE/members/$MEMBER/voices
@@ -1683,9 +1689,10 @@ Phase 6 — Security & polish
 ### Services
 - [x] `activity.service.ts` — audit log helper (§0.2)
 - [x] `tree.service.ts`
-- [ ] `member.service.ts`
-- [ ] `memberRelationType.service.ts`
-- [ ] `voice.service.ts`
+- [x] `member.service.ts`
+- [x] `memberRelationType.service.ts`
+- [x] `voice.service.ts`
+- [x] `home.service.ts`
 - [ ] `chat.service.ts`
 - [x] `settings.service.ts`
 - [x] `session.service.ts`
@@ -1705,15 +1712,15 @@ Phase 6 — Security & polish
 
 ### Controllers
 - [x] `tree.controller.ts` — User (`auth()`)
-- [ ] `member.controller.ts` — User
-- [ ] `voice.controller.ts` — User
+- [x] `member.controller.ts` — User
+- [x] `voice.controller.ts` — User
 - [ ] `chat.controller.ts` — User
 - [ ] `settings.controller.ts` — User
 - [ ] `session.controller.ts` — User
 - [ ] `billing.controller.ts` — User
 - [ ] `notificationInbox.controller.ts` — User (inbox)
 - [ ] `archive.controller.ts` — User
-- [ ] `home.controller.ts` — User
+- [x] `home.controller.ts` — User
 - [ ] Extend existing controllers for dashboard (§16) — no `controllers/admin/` folder
 
 ### Routes
@@ -1902,9 +1909,9 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **1.4** ✅ | `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password` | bcrypt in Mongo; change-password updates Firebase + Mongo; refresh tokens revoked | `npm run test:flow -- 1.4` |
 | **1.5** ✅ | `feat(auth): track login sessions and link refresh tokens in Mongo` | Login twice → sessions + Token docs; refresh from Mongo; GET devices | `npm run test:flow -- 1.5` |
 | **2.1** ✅ | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user | `npm run test:flow -- 2.1` |
-| **2.2** | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree | `npm run test:flow -- 2.2` |
-| **2.3** | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member | `npm run test:flow -- 2.3` |
-| **2.4** | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` | `npm run test:flow -- 2.4` |
+| **2.2** ✅ | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree | `npm run test:flow -- 2.2` |
+| **2.3** ✅ | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member | `npm run test:flow -- 2.3` |
+| **2.4** ✅ | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` | `npm run test:flow -- 2.4` |
 | **3.1** | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once | `npm run test:flow -- 3.1` |
 | **3.2** | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
 | **3.3** | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |

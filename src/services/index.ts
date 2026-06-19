@@ -10,4 +10,8 @@ export { default as termsService } from './terms.service.ts';
 export { default as privacyService } from './privacy.service.ts';
 export { default as aboutService } from './about.service.ts';
 export { default as treeService } from './tree.service.ts';
+export { default as memberService } from './member.service.ts';
+export { default as memberRelationTypeService } from './memberRelationType.service.ts';
+export { default as voiceService } from './voice.service.ts';
+export { default as homeService } from './home.service.ts';
 export { default as sessionService } from './session.service.ts';
