@@ -178,7 +178,9 @@ export default {
   nidVerifyApproval,
   nidVerifyReject,
   nidVerifySubmitList,
-listMyDevices,
+  getMyProfile,
+  updateMyProfile,
+  listMyDevices,
   revokeMyDevice,
   revokeAllMyDevices,
 };

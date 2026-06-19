@@ -190,6 +190,8 @@ router.route('/me/devices').get(auth(), userController.listMyDevices);
 router.route('/me/devices/:sessionId').delete(auth(), userController.revokeMyDevice);
 router.route('/me/devices').delete(auth(), userController.revokeAllMyDevices);
 
+router.route('/me').get(auth(), userController.getMyProfile).patch(auth(), userController.updateMyProfile);
+
 router
   .route('/me/security/2fa/enable')
   .post(auth(), securityController.enableTwoFactor);

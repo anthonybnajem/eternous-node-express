@@ -1,6 +1,7 @@
 import httpStatus from 'http-status';
 import type { FilterQuery } from 'mongoose';
 import { User } from '../models/index.ts';
+import subscriptionService from './subscription.service.ts';
 import type { UserAttrs, UserDocument } from '../models/user.model.ts';
 import ApiError from '../utils/ApiError.ts';
 import logger from '../config/logger.ts';
@@ -207,6 +208,35 @@ const nidVerifySubmitList = async (): Promise<UserDocument[]> => {
 
 const interestList = async (): Promise<string[]> => [];
 
+const getMyProfile = async (userId: ObjectIdLike) => {
+  const user = await getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  const currentSubscription = await subscriptionService.getCurrentSubscription(userId);
+
+  return {
+    user,
+    creditBalance: user.creditBalance ?? 0,
+    currentSubscription,
+  };
+};
+
+const updateMyProfile = async (userId: ObjectIdLike, updateBody: UserUpdateBody): Promise<UserDocument> => {
+  if (updateBody.username && (await User.isUsernameTaken(updateBody.username, userId))) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Username already taken');
+  }
+
+  const allowed: UserUpdateBody = {};
+  if (updateBody.fullName !== undefined) allowed.fullName = updateBody.fullName;
+  if (updateBody.username !== undefined) allowed.username = updateBody.username;
+  if (updateBody.phoneNumber !== undefined) allowed.phoneNumber = updateBody.phoneNumber;
+  if (updateBody.address !== undefined) allowed.address = updateBody.address;
+
+  return updateUserById(userId, allowed);
+};
+
 export default {
   createUser,
   queryUsers,
@@ -220,6 +250,8 @@ export default {
   nidVerifyReject,
   nidVerifySubmitList,
   interestList,
+  getMyProfile,
+  updateMyProfile,
 };
 
 export {
@@ -235,4 +267,6 @@ export {
   nidVerifyReject,
   nidVerifySubmitList,
   interestList,
+  getMyProfile,
+  updateMyProfile,
 };
