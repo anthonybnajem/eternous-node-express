@@ -4,6 +4,7 @@ import config from '../../config/config.ts';
 import logger from '../../config/logger.ts';
 import ApiError from '../../utils/ApiError.ts';
 import subscriptionService from '../subscription.service.ts';
+import { grantPlanCreditsFromInvoice } from './stripeCredits.service.ts';
 
 const stripe = new Stripe(config.stripe.secretKey);
 
@@ -186,7 +187,15 @@ const handleWebhookEvent = async (event: Stripe.Event): Promise<void> => {
     case 'customer.subscription.deleted':
       await subscriptionService.syncSubscriptionFromStripe(event.data.object as Stripe.Subscription);
       break;
-    case 'invoice.payment_succeeded':
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object as Stripe.Invoice;
+      if (typeof invoice.subscription === 'string' && invoice.subscription.length > 0) {
+        const stripeSubscription = await stripe.subscriptions.retrieve(invoice.subscription);
+        await subscriptionService.syncSubscriptionFromStripe(stripeSubscription, invoice.metadata?.userId);
+      }
+      await grantPlanCreditsFromInvoice(invoice);
+      break;
+    }
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice;
       if (typeof invoice.subscription === 'string' && invoice.subscription.length > 0) {
@@ -209,6 +218,10 @@ const handleWebhookEvent = async (event: Stripe.Event): Promise<void> => {
   }
 };
 
+const retrieveSubscription = async (subscriptionId: string): Promise<Stripe.Subscription> => {
+  return stripe.subscriptions.retrieve(subscriptionId);
+};
+
 const constructWebhookEvent = (payload: Buffer | string, signature: string): Stripe.Event => {
   try {
     return stripe.webhooks.constructEvent(payload, signature, config.stripe.webhookSecret);
@@ -226,4 +239,5 @@ export {
   createRefund,
   handleWebhookEvent,
   constructWebhookEvent,
+  retrieveSubscription,
 };

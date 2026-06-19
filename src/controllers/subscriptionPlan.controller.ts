@@ -3,7 +3,7 @@ import httpStatus from 'http-status';
 import catchAsync from '../utils/catchAsync.ts';
 import response from '../config/response.ts';
 import { subscriptionPlanService, activityService } from '../services/index.ts';
-import type { SubscriptionPlanAttrs } from '../models/subscriptionPlan.model.ts';
+import type { CreateSubscriptionPlanBody, UpdateSubscriptionPlanBody } from '../services/subscriptionPlan.service.ts';
 import ApiError from '../utils/ApiError.ts';
 
 type EmptyParams = Record<string, never>;
@@ -34,7 +34,7 @@ const getPricePlans = catchAsync(async (_req, res: Response): Promise<void> => {
   );
 });
 
-const createPricePlan = catchAsync<EmptyParams, unknown, SubscriptionPlanAttrs, EmptyQuery>(
+const createPricePlan = catchAsync<EmptyParams, unknown, CreateSubscriptionPlanBody, EmptyQuery>(
   async (req, res: Response): Promise<void> => {
     requireAdmin(req);
     const plan = await subscriptionPlanService.createSubscriptionPlan(req.body);
@@ -42,6 +42,8 @@ const createPricePlan = catchAsync<EmptyParams, unknown, SubscriptionPlanAttrs, 
       planId: plan.id,
       priceId: plan.priceId,
       amount: plan.amount,
+      credits: plan.credits,
+      planType: plan.planType,
     });
     res.status(httpStatus.CREATED).json(
       response({
@@ -54,7 +56,7 @@ const createPricePlan = catchAsync<EmptyParams, unknown, SubscriptionPlanAttrs, 
   }
 );
 
-const updatePricePlan = catchAsync<PlanIdParams, unknown, Partial<SubscriptionPlanAttrs>, EmptyQuery>(
+const updatePricePlan = catchAsync<PlanIdParams, unknown, UpdateSubscriptionPlanBody, EmptyQuery>(
   async (req, res: Response): Promise<void> => {
     requireAdmin(req);
     const plan = await subscriptionPlanService.updateSubscriptionPlan(req.params.planId, req.body);

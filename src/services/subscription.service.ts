@@ -180,6 +180,10 @@ const syncSubscriptionFromStripe = async (
   return createdSubscription;
 };
 
+const getSubscriptionByExternalId = async (externalSubscriptionId: string): Promise<SubscriptionDocument | null> => {
+  return Subscription.findOne({ externalSubscriptionId });
+};
+
 const createSubscription = async (body: CreateSubscriptionBody): Promise<SubscriptionDocument> => {
   const user = await User.findById(body.user);
   if (!user) {
@@ -263,6 +267,7 @@ const cancelSubscription = async (
 export default {
   createSubscription,
   getSubscriptionById,
+  getSubscriptionByExternalId,
   listSubscriptionsByUser,
   getCurrentSubscription,
   updateSubscriptionById,
@@ -275,6 +280,7 @@ export default {
 export {
   createSubscription,
   getSubscriptionById,
+  getSubscriptionByExternalId,
   listSubscriptionsByUser,
   getCurrentSubscription,
   updateSubscriptionById,

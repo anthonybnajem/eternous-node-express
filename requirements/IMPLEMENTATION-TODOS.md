@@ -833,20 +833,21 @@ Script: `scripts/test-flows/step-5.2.sh` — chains API calls; passes `TOKEN`, i
 > Monthly/Yearly plans from dashboard (Stripe). Name, price, description, feature bullet points.
 
 ### DB
-- [ ] `SubscriptionPlan`: add `credits` (per billing period), `planType` (monthly | yearly | preservation)
-- [ ] `SubscriptionPlan`: `features` string[] (bullet points)
-- [ ] Stripe `priceId` sync from dashboard
+- [x] `SubscriptionPlan`: `credits` (per billing period), `planType` (monthly | yearly | preservation)
+- [x] `SubscriptionPlan`: `features` string[] (bullet points)
+- [x] Stripe `priceId` sync from dashboard / admin create
 
 ### Models
-- [~] `subscriptionPlan.model.ts` — add `credits`, `planType`
+- [x] `subscriptionPlan.model.ts` — `credits`, `planType`
 
 ### Services
-- [~] `subscriptionPlan.service.ts` — CRUD exists
-- [ ] Dashboard admin: create/update plan → create Stripe Product + Price → save `priceId`
-- [ ] Public list: active plans with formatted price
+- [x] `subscriptionPlan.service.ts` — CRUD + auto slug + Stripe Product/Price on create
+- [x] `subscriptionPlan.service.ts` — Public list: active plans with credits/planType
+- [x] `credit.service.ts` — `grantCredits` with `idempotencyKey` (Step 3.1 hook)
+- [~] Dashboard admin: create/update plan → Stripe sync when `STRIPE_SECRET_KEY` set; dev fallback `dev_price_*`
 
 ### Controllers
-- [~] `subscriptionPlan.controller.ts`
+- [x] `subscriptionPlan.controller.ts`
 
 ### Routes / APIs
 
@@ -854,7 +855,7 @@ Script: `scripts/test-flows/step-5.2.sh` — chains API calls; passes `TOKEN`, i
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| GET | `/subscriptions/price-plans` | Public | [~] | Active preservation plans for app |
+| GET | `/subscriptions/price-plans` | Public | [x] | Active plans with `credits`, `planType` |
 | POST | `/subscriptions/checkout-session` | User | [~] | Stripe checkout |
 | GET | `/subscriptions/me` | User | [~] | Current plan + history |
 | PATCH | `/subscriptions/:id/cancel` | User | [~] | Cancel own plan |
@@ -869,14 +870,15 @@ Script: `scripts/test-flows/step-5.2.sh` — chains API calls; passes `TOKEN`, i
 | PATCH | `/subscriptions/:id/activate` | Dashboard | [~] | `auth('manageUsers')` + admin role in controller |
 
 ### Validations
-- [~] `subscriptionPlan.validation.ts` — add credits, planType
+- [x] `subscriptionPlan.validation.ts` — credits, planType, optional slug/priceId
 
-#### Step 3.1 — Plan credits + Stripe webhook idempotency
+#### Step 3.1 — Plan credits + Stripe webhook idempotency ✅ DONE
 
 **Commit:** `feat(subscriptions): add plan credits and idempotent Stripe webhooks`
 
 **Test:**
 ```bash
+npm run typecheck
 curl $BASE/subscriptions/price-plans
 # → 200, plans include credits and planType fields
 
@@ -884,10 +886,10 @@ curl $BASE/subscriptions/price-plans
 curl -X POST $BASE/subscriptions/price-plans -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Pro","price":80,"credits":100,"planType":"monthly","features":["..."]}'
-# → 201, priceId synced to Stripe
+# → 201, priceId synced to Stripe (or dev_price_* without Stripe)
 
 # Replay same Stripe invoice webhook twice → User.creditBalance increases once only
-# Mongo: CreditTransaction idempotencyKey = invoiceId
+# Mongo: CreditTransaction idempotencyKey = stripe:invoice:<invoiceId>
 ```
 
 **Flow test:** `npm run test:flow -- 3.1`  
@@ -1174,18 +1176,18 @@ Script: `scripts/test-flows/step-6.2.sh` — chains API calls; passes `TOKEN`, i
 
 ### DB
 - [~] `CreditTransaction` — full ledger model exists
-- [ ] `User.creditBalance` — denormalized balance
+- [x] `User.creditBalance` — denormalized balance (updated on grant)
 
 ### Models
 - [ ] `user.model.ts` — add `creditBalance`
 - [~] `creditTransaction.model.ts`
 
 ### Services
-- [ ] `credit.service.ts` — `grantCredits(userId, amount, type, idempotencyKey, meta)`
+- [x] `credit.service.ts` — `grantCredits(userId, amount, type, idempotencyKey, meta)`
 - [ ] `credit.service.ts` — `deductCredits(userId, amount, type, meta)` — MongoDB transaction
 - [ ] `credit.service.ts` — `getBalance`, `getHistory` (paginated)
 - [ ] `credit.service.ts` — admin `adjustCredits`
-- [ ] Hook: Stripe `invoice.payment_succeeded` → grant plan credits once (idempotent by invoiceId)
+- [x] Hook: Stripe `invoice.payment_succeeded` → grant plan credits once (idempotent by invoiceId)
 - [ ] Hook: chat/voice generation → deduct credits
 - [ ] Hook: refund → negative grant or reversal transaction
 
@@ -1912,7 +1914,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **2.2** ✅ | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree | `npm run test:flow -- 2.2` |
 | **2.3** ✅ | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member | `npm run test:flow -- 2.3` |
 | **2.4** ✅ | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` | `npm run test:flow -- 2.4` |
-| **3.1** | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once | `npm run test:flow -- 3.1` |
+| **3.1** ✅ | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once | `npm run test:flow -- 3.1` |
 | **3.2** | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
 | **3.3** | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
 | **3.4** | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
