@@ -1179,14 +1179,14 @@ Script: `scripts/test-flows/step-6.2.sh` — chains API calls; passes `TOKEN`, i
 - [x] `User.creditBalance` — denormalized balance (updated on grant)
 
 ### Models
-- [ ] `user.model.ts` — add `creditBalance`
+- [x] `user.model.ts` — `creditBalance`
 - [~] `creditTransaction.model.ts`
 
 ### Services
 - [x] `credit.service.ts` — `grantCredits(userId, amount, type, idempotencyKey, meta)`
-- [ ] `credit.service.ts` — `deductCredits(userId, amount, type, meta)` — MongoDB transaction
-- [ ] `credit.service.ts` — `getBalance`, `getHistory` (paginated)
-- [ ] `credit.service.ts` — admin `adjustCredits`
+- [x] `credit.service.ts` — `deductCredits(userId, amount, type, meta)` — MongoDB transaction
+- [x] `credit.service.ts` — `getBalance`, `getHistory` (paginated)
+- [x] `credit.service.ts` — admin `adjustCredits`
 - [x] Hook: Stripe `invoice.payment_succeeded` → grant plan credits once (idempotent by invoiceId)
 - [ ] Hook: chat/voice generation → deduct credits
 - [ ] Hook: refund → negative grant or reversal transaction
@@ -1197,16 +1197,16 @@ Script: `scripts/test-flows/step-6.2.sh` — chains API calls; passes `TOKEN`, i
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| GET | `/users/me/credits` | User | [ ] | Balance + recent transactions |
-| GET | `/users/me/credits/history` | User | [ ] | Paginated ledger |
+| GET | `/users/me/credits` | User | [x] | Balance + recent transactions |
+| GET | `/users/me/credits/history` | User | [x] | Paginated ledger |
 
 **Dashboard:**
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| POST | `/users/:userId/credits` | Dashboard | [ ] | `auth('manageUsers')` — manual credit adjust |
+| POST | `/users/:userId/credits` | Dashboard | [x] | `auth('manageUsers')` — manual credit adjust |
 
-#### Step 3.2 — Credits ledger + balance
+#### Step 3.2 — Credits ledger + balance ✅ DONE
 
 **Commit:** `feat(credits): add credit balance, ledger, and admin adjust`
 
@@ -1915,7 +1915,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **2.3** ✅ | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member | `npm run test:flow -- 2.3` |
 | **2.4** ✅ | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` | `npm run test:flow -- 2.4` |
 | **3.1** ✅ | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once | `npm run test:flow -- 3.1` |
-| **3.2** | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
+| **3.2** ✅ | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
 | **3.3** | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
 | **3.4** | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
 | **4.1** | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline | `npm run test:flow -- 4.1` |

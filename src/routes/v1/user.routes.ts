@@ -1,6 +1,9 @@
 import express from 'express';
 import auth from '../../middlewares/auth.ts';
+import validate from '../../middlewares/validate.ts';
 import userController from '../../controllers/user.controller.ts';
+import { creditController } from '../../controllers/index.ts';
+import { creditValidation } from '../../validations/index.ts';
 import userFileUploadMiddleware from '../../middlewares/fileUpload.ts';
 import convertHeicToPngMiddleware from '../../middlewares/converter.ts';
 
@@ -182,6 +185,52 @@ router.route('/nidVerifySubmitList').get(auth('common'), userController.nidVerif
  *         $ref: '#/components/responses/Unauthorized'
  */
 router.route('/me/devices').get(auth(), userController.listMyDevices);
+
+/**
+ * @swagger
+ * /v1/users/me/credits:
+ *   get:
+ *     summary: Get current user credit balance
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: OK
+ */
+router.route('/me/credits').get(auth(), creditController.getMyCredits);
+
+/**
+ * @swagger
+ * /v1/users/me/credits/history:
+ *   get:
+ *     summary: Get paginated credit transaction history
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: OK
+ */
+router
+  .route('/me/credits/history')
+  .get(auth(), validate(creditValidation.getCreditHistory), creditController.getMyCreditHistory);
+
+/**
+ * @swagger
+ * /v1/users/{userId}/credits:
+ *   post:
+ *     summary: Adjust user credits (admin)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: OK
+ */
+router
+  .route('/:userId/credits')
+  .post(auth('manageUsers'), validate(creditValidation.adjustCredits), creditController.adjustUserCredits);
 
 /**
  * @swagger
