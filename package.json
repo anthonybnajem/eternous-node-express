@@ -20,6 +20,7 @@
     "test:log-report": "tsx scripts/test-log-report.ts",
     "test:email-report": "tsx scripts/test-email-report.ts",
     "test:scheduler": "tsx scripts/test-scheduler.ts",
+    "test:notification-crons": "tsx scripts/test-notification-crons.ts",
     "test:flow": "bash scripts/test-flows/run.sh",
     "test:flow:smoke": "bash scripts/test-flows/smoke-core.sh",
     "migrate:up": "tsx ./node_modules/migrate-mongo/bin/migrate-mongo.js -f migrate-mongo-config.ts up",

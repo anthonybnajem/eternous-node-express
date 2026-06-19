@@ -6,6 +6,7 @@ import { connectDB, closeDB } from './config/database.ts';
 import { closeRedis } from './config/redis.ts';
 import { closeQueues } from './queues/index.ts';
 import { startLogReportScheduler, startLogCleanupScheduler, stopAllSchedulers } from './config/scheduler.ts';
+import { startNotificationSchedulers, stopNotificationSchedulers } from './config/notificationScheduler.ts';
 
 import './queues/processors/email.processor.js';
 import './queues/processors/notification.processor.js';
@@ -24,6 +25,7 @@ const startServer = async (): Promise<void> => {
 
       startLogReportScheduler();
       startLogCleanupScheduler();
+      startNotificationSchedulers();
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -40,6 +42,7 @@ const exitHandler = async (): Promise<void> => {
 
       try {
         stopAllSchedulers();
+        stopNotificationSchedulers();
         await closeQueues();
         await closeRedis();
         await closeDB();

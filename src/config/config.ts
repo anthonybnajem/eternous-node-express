@@ -66,6 +66,12 @@ const envVarsSchema = Joi.object()
       .default(60)
       .description('Cooldown before resending Firebase email verification'),
     LOG_REPORT_TIMEZONE: Joi.string().default('UTC').description('Timezone for scheduled reports'),
+    NOTIFICATION_CRONS_ENABLED: Joi.boolean().default(false).description('Enable notification cron schedulers'),
+    NOTIFICATION_CRON_TIMEZONE: Joi.string().default('UTC').description('Timezone for notification cron jobs'),
+    CREDITS_LOW_THRESHOLD: Joi.number().default(10).description('Credits low notification threshold'),
+    CHAT_CREDIT_COST: Joi.number().default(1).description('Credits deducted per chat message'),
+    OPENAI_API_KEY: Joi.string().allow('').description('OpenAI API key for chat'),
+    VOICE_CLONE_API_URL: Joi.string().uri().allow('').description('External voice clone API URL'),
   })
   .unknown();
 
@@ -143,6 +149,16 @@ const config = {
   },
   auth: {
     resendVerificationCooldownSeconds: envVars.AUTH_RESEND_VERIFICATION_COOLDOWN_SECONDS,
+  },
+  notifications: {
+    cronsEnabled: envVars.NOTIFICATION_CRONS_ENABLED,
+    timezone: envVars.NOTIFICATION_CRON_TIMEZONE,
+    creditsLowThreshold: envVars.CREDITS_LOW_THRESHOLD,
+  },
+  chat: {
+    creditCost: envVars.CHAT_CREDIT_COST,
+    openAiApiKey: envVars.OPENAI_API_KEY,
+    voiceCloneApiUrl: envVars.VOICE_CLONE_API_URL,
   },
   name: 'Node.js Backend Boilerplate',
 };

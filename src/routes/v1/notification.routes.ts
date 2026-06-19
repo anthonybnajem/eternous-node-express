@@ -1,9 +1,10 @@
 import express from 'express';
 import * as notificationController from '../../controllers/notification.controller.ts';
 import { notificationInboxController } from '../../controllers/index.ts';
+import notificationCronController from '../../controllers/notificationCron.controller.ts';
 import auth from '../../middlewares/auth.ts';
 import validate from '../../middlewares/validate.ts';
-import { notificationValidation } from '../../validations/index.ts';
+import { notificationValidation, notificationCronValidation } from '../../validations/index.ts';
 
 const router = express.Router();
 
@@ -17,6 +18,10 @@ const router = express.Router();
 router
   .route('/')
   .get(auth(), validate(notificationValidation.listNotifications), notificationInboxController.listNotifications);
+
+router
+  .route('/crons/run')
+  .post(auth('manageUsers'), validate(notificationCronValidation.runNotificationCron), notificationCronController.runNotificationCron);
 
 router
   .route('/:id/read')
