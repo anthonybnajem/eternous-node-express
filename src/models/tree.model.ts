@@ -66,6 +66,9 @@ const treeSchema = new mongoose.Schema<TreeAttrs, TreeModel>(
   }
 );
 
+treeSchema.index({ userId: 1, isDeleted: 1 });
+treeSchema.index({ userId: 1, isDefault: 1 });
+
 treeSchema.plugin(toJSON as never);
 treeSchema.plugin(paginate as never);
 

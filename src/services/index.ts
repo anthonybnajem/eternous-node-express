@@ -9,4 +9,5 @@ export { default as subscriptionPlanService } from './subscriptionPlan.service.t
 export { default as termsService } from './terms.service.ts';
 export { default as privacyService } from './privacy.service.ts';
 export { default as aboutService } from './about.service.ts';
+export { default as treeService } from './tree.service.ts';
 export { default as sessionService } from './session.service.ts';

@@ -545,20 +545,20 @@ Script: `scripts/test-flows/step-2.4.sh` — chains API calls; passes `TOKEN`, i
 > CRUD, background image, duplicate tree (copy members optional), soft delete.
 
 ### DB
-- [ ] `Tree`: `userId`, `name`, `image`, `backgroundImage`, `description`, `isDefault`, `isDeleted`
-- [ ] Index: `{ userId: 1, isDeleted: 1 }`, `{ userId: 1, isDefault: 1 }`
+- [x] `Tree`: `userId`, `name`, `image`, `backgroundImage`, `description`, `isDefault`, `isDeleted`
+- [x] Index: `{ userId: 1, isDeleted: 1 }`, `{ userId: 1, isDefault: 1 }`
 
 ### Models
-- [~] `tree.model.ts` — exists; confirm `backgroundImage` field
+- [x] `tree.model.ts` — `backgroundImage` field + compound indexes
 
 ### Services
-- [ ] `tree.service.ts` — create, list, getById, update, softDelete
-- [ ] `tree.service.ts` — `duplicateTree(treeId, { copyMembers: boolean })`
-- [ ] `tree.service.ts` — set default tree (only one `isDefault` per user)
-- [ ] Storage: upload tree photo + background image; return URL object
+- [x] `tree.service.ts` — create, list, getById, update, softDelete
+- [x] `tree.service.ts` — `duplicateTree(treeId, { copyMembers: boolean })`
+- [x] `tree.service.ts` — set default tree (only one `isDefault` per user)
+- [x] Storage: upload tree photo + background image; return URL object (`utils/treeUpload.ts`)
 
 ### Controllers
-- [ ] `tree.controller.ts`
+- [x] `tree.controller.ts`
 
 ### Routes / APIs
 
@@ -566,18 +566,18 @@ Script: `scripts/test-flows/step-2.4.sh` — chains API calls; passes `TOKEN`, i
 
 | Method | Path | Access | Status | Body / notes |
 |--------|------|--------|--------|--------------|
-| GET | `/trees` | User | [ ] | Paginated list (own trees) |
-| POST | `/trees` | User | [ ] | `name`, optional `image` (multipart) |
-| GET | `/trees/:treeId` | User | [ ] | Own tree + member count |
-| PATCH | `/trees/:treeId` | User | [ ] | `name`, `image`, `backgroundImage` |
-| DELETE | `/trees/:treeId` | User | [ ] | Soft delete |
-| POST | `/trees/:treeId/duplicate` | User | [ ] | `{ copyMembers?: boolean }` |
-| PATCH | `/trees/:treeId/default` | User | [ ] | Set as default tree |
+| GET | `/trees` | User | [x] | Paginated list (own trees) |
+| POST | `/trees` | User | [x] | `name`, optional `image` (multipart) |
+| GET | `/trees/:treeId` | User | [x] | Own tree + member count |
+| PATCH | `/trees/:treeId` | User | [x] | `name`, `image`, `backgroundImage` |
+| DELETE | `/trees/:treeId` | User | [x] | Soft delete |
+| POST | `/trees/:treeId/duplicate` | User | [x] | `{ copyMembers?: boolean }` |
+| PATCH | `/trees/:treeId/default` | User | [x] | Set as default tree |
 
 ### Validations
-- [ ] `tree.validation.ts`
+- [x] `tree.validation.ts`
 
-#### Step 2.1 — Trees CRUD
+#### Step 2.1 — Trees CRUD ✅ DONE
 
 **Commit:** `feat(trees): add tree CRUD, duplicate, and default tree`
 
@@ -1682,7 +1682,7 @@ Phase 6 — Security & polish
 
 ### Services
 - [x] `activity.service.ts` — audit log helper (§0.2)
-- [ ] `tree.service.ts`
+- [x] `tree.service.ts`
 - [ ] `member.service.ts`
 - [ ] `memberRelationType.service.ts`
 - [ ] `voice.service.ts`
@@ -1704,7 +1704,7 @@ Phase 6 — Security & polish
 - [ ] `home.service.ts`
 
 ### Controllers
-- [ ] `tree.controller.ts` — User (`auth()`)
+- [x] `tree.controller.ts` — User (`auth()`)
 - [ ] `member.controller.ts` — User
 - [ ] `voice.controller.ts` — User
 - [ ] `chat.controller.ts` — User
@@ -1901,7 +1901,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **1.3** ✅ | `feat(auth): use Firebase email verification instead of custom OTP` | Unverified email → 400; after Firebase verify → login + Mongo JWT |
 | **1.4** ✅ | `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password` | bcrypt in Mongo; change-password updates Firebase + Mongo; refresh tokens revoked | `npm run test:flow -- 1.4` |
 | **1.5** ✅ | `feat(auth): track login sessions and link refresh tokens in Mongo` | Login twice → sessions + Token docs; refresh from Mongo; GET devices | `npm run test:flow -- 1.5` |
-| **2.1** | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user | `npm run test:flow -- 2.1` |
+| **2.1** ✅ | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user | `npm run test:flow -- 2.1` |
 | **2.2** | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree | `npm run test:flow -- 2.2` |
 | **2.3** | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member | `npm run test:flow -- 2.3` |
 | **2.4** | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` | `npm run test:flow -- 2.4` |
