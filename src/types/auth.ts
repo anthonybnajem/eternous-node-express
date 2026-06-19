@@ -38,8 +38,13 @@ export interface ChangePasswordBody {
 }
 
 export interface VerifyEmailBody {
+  idToken?: string;
+  email?: string;
+  oneTimeCode?: number | string;
+}
+
+export interface ResendVerificationBody {
   email: string;
-  oneTimeCode: number;
 }
 
 export interface DeleteMeBody {

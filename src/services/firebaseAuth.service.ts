@@ -1,9 +1,12 @@
 import httpStatus from 'http-status';
-import type { DecodedIdToken } from 'firebase-admin/auth';
+import type { DecodedIdToken, UserRecord } from 'firebase-admin/auth';
 import initializeFirebaseApp from '../config/firebase.ts';
+import config from '../config/config.ts';
 import ApiError from '../utils/ApiError.ts';
 import User, { type AuthProvider, type UserDocument } from '../models/user.model.ts';
 import { ensureDefaultSettings } from './settings.service.ts';
+import emailService from './email.service.ts';
+import logger from '../config/logger.ts';
 
 const mapFirebaseProvider = (provider?: string): AuthProvider => {
   switch (provider) {
@@ -26,6 +29,80 @@ const getFirebaseApp = () => {
     throw new ApiError(httpStatus.SERVICE_UNAVAILABLE, 'Firebase auth is not configured');
   }
   return app;
+};
+
+const getFirebaseAuth = () => getFirebaseApp().auth();
+
+const isFirebaseConfigured = (): boolean => {
+  try {
+    return Boolean(getFirebaseApp());
+  } catch {
+    return false;
+  }
+};
+
+const getFirebaseUserByEmail = async (email: string): Promise<UserRecord | null> => {
+  try {
+    return await getFirebaseAuth().getUserByEmail(email.toLowerCase());
+  } catch (error) {
+    const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code?: unknown }).code) : '';
+    if (errorCode === 'auth/user-not-found') {
+      return null;
+    }
+    throw error;
+  }
+};
+
+const createFirebaseEmailUser = async ({
+  email,
+  password,
+  displayName,
+  emailVerified = false,
+}: {
+  email: string;
+  password: string;
+  displayName?: string;
+  emailVerified?: boolean;
+}): Promise<UserRecord> => {
+  const normalizedEmail = email.toLowerCase();
+  const auth = getFirebaseAuth();
+  const existing = await getFirebaseUserByEmail(normalizedEmail);
+
+  if (existing) {
+    await auth.updateUser(existing.uid, {
+      password,
+      displayName: displayName || existing.displayName || '',
+      emailVerified: emailVerified || existing.emailVerified,
+    });
+    return auth.getUser(existing.uid);
+  }
+
+  return auth.createUser({
+    email: normalizedEmail,
+    password,
+    displayName: displayName || '',
+    emailVerified,
+  });
+};
+
+const generateEmailVerificationLink = async (email: string): Promise<string> => {
+  const continueUrl = config.clientUrl || 'http://localhost:3000';
+  return getFirebaseAuth().generateEmailVerificationLink(email.toLowerCase(), {
+    url: continueUrl,
+    handleCodeInApp: true,
+  });
+};
+
+const sendFirebaseEmailVerification = async (email: string): Promise<void> => {
+  const link = await generateEmailVerificationLink(email);
+  await emailService.sendFirebaseEmailVerificationLink(email, link);
+};
+
+const assertFirebaseEmailVerified = (decoded: DecodedIdToken): void => {
+  const provider = decoded.firebase?.sign_in_provider;
+  if (provider === 'password' && !decoded.email_verified) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Email not verified');
+  }
 };
 
 const verifyIdToken = async (idToken: string): Promise<DecodedIdToken> => {
@@ -130,4 +207,17 @@ const upsertFirebaseSeedUser = async (user: FirebaseSeedUser): Promise<void> => 
   }
 };
 
-export { verifyIdToken, syncFirebaseUser, deleteFirebaseUser, mapFirebaseProvider, upsertFirebaseSeedUser };
+export {
+  verifyIdToken,
+  syncFirebaseUser,
+  deleteFirebaseUser,
+  mapFirebaseProvider,
+  upsertFirebaseSeedUser,
+  isFirebaseConfigured,
+  getFirebaseUserByEmail,
+  createFirebaseEmailUser,
+  generateEmailVerificationLink,
+  sendFirebaseEmailVerification,
+  assertFirebaseEmailVerified,
+  getFirebaseAuth,
+};

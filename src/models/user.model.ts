@@ -34,6 +34,7 @@ export interface UserAttrs {
   lastLogin?: Date;
   oneTimeCode?: number | null;
   oneTimeCodeExpiresAt?: Date | null;
+  emailVerificationSentAt?: Date | null;
   phoneNumberOTP?: number | null;
   nidNumber?: string;
   nidStatus?: 'unverified' | 'pending' | 'approved' | 'cancelled';
@@ -166,6 +167,10 @@ const userSchema = new mongoose.Schema<UserAttrs, UserModel, UserMethods>(
       default: null,
     },
     oneTimeCodeExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    emailVerificationSentAt: {
       type: Date,
       default: null,
     },

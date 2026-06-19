@@ -1,12 +1,20 @@
 import httpStatus from 'http-status';
+import config from '../config/config.ts';
 import * as tokenService from './token.service.ts';
 import * as userService from './user.service.ts';
 import Token from '../models/token.model.ts';
 import type { UserDocument } from '../models/user.model.ts';
 import ApiError from '../utils/ApiError.ts';
 import { tokenTypes } from '../config/tokens.ts';
-import type { AuthTokens, ChangePasswordBody, VerifyEmailBody } from '../types/auth.ts';
+import type { AuthTokens, ChangePasswordBody, ResendVerificationBody, VerifyEmailBody } from '../types/auth.ts';
 import type { ObjectIdLike } from '../types/common.ts';
+import {
+  assertFirebaseEmailVerified,
+  isFirebaseConfigured,
+  sendFirebaseEmailVerification,
+  syncFirebaseUser,
+  verifyIdToken,
+} from './firebaseAuth.service.ts';
 
 const loginUserWithEmailAndPassword = async (email: string, password: string): Promise<UserDocument> => {
   const user = await userService.getUserByEmail(email);
@@ -74,8 +82,27 @@ const changePassword = async (reqUser: UserDocument, reqBody: ChangePasswordBody
   return user;
 };
 
-const verifyEmail = async (reqBody: VerifyEmailBody, _reqQuery?: Record<string, unknown>): Promise<UserDocument> => {
+const verifyEmailWithIdToken = async (idToken: string): Promise<UserDocument> => {
+  const decoded = await verifyIdToken(idToken);
+
+  if (!decoded.email_verified) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Email not verified in Firebase yet');
+  }
+
+  const user = await syncFirebaseUser(decoded);
+  user.isEmailVerified = true;
+  user.oneTimeCode = null;
+  user.oneTimeCodeExpiresAt = null;
+  await user.save();
+  return user;
+};
+
+const verifyEmailLegacy = async (reqBody: VerifyEmailBody): Promise<UserDocument> => {
   const { email, oneTimeCode } = reqBody;
+  if (!email || oneTimeCode === undefined || oneTimeCode === null) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Email and oneTimeCode are required for legacy verification');
+  }
+
   const user = await userService.getUserByEmail(email);
 
   if (!user) {
@@ -84,7 +111,7 @@ const verifyEmail = async (reqBody: VerifyEmailBody, _reqQuery?: Record<string, 
   if (user.oneTimeCode === null || user.oneTimeCode === undefined) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'OTP expired');
   }
-  if (oneTimeCode !== user.oneTimeCode) {
+  if (Number(oneTimeCode) !== user.oneTimeCode) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid OTP');
   }
   if (user.isEmailVerified && !user.isResetPassword) {
@@ -96,6 +123,46 @@ const verifyEmail = async (reqBody: VerifyEmailBody, _reqQuery?: Record<string, 
   user.isResetPassword = false;
   await user.save();
   return user;
+};
+
+const verifyEmail = async (reqBody: VerifyEmailBody, _reqQuery?: Record<string, unknown>): Promise<UserDocument> => {
+  if (reqBody.idToken) {
+    return verifyEmailWithIdToken(reqBody.idToken);
+  }
+
+  return verifyEmailLegacy(reqBody);
+};
+
+const resendEmailVerification = async ({ email }: ResendVerificationBody): Promise<void> => {
+  const user = await userService.getUserByEmail(email);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+  if (user.isEmailVerified) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Email already verified');
+  }
+  if (!isFirebaseConfigured()) {
+    throw new ApiError(httpStatus.SERVICE_UNAVAILABLE, 'Firebase auth is not configured');
+  }
+
+  if (user.emailVerificationSentAt) {
+    const cooldownMs = config.auth.resendVerificationCooldownSeconds * 1000;
+    const elapsed = Date.now() - user.emailVerificationSentAt.getTime();
+    if (elapsed < cooldownMs) {
+      const waitSeconds = Math.ceil((cooldownMs - elapsed) / 1000);
+      throw new ApiError(httpStatus.TOO_MANY_REQUESTS, `Please wait ${waitSeconds} seconds before resending verification email`);
+    }
+  }
+
+  await sendFirebaseEmailVerification(email);
+  user.emailVerificationSentAt = new Date();
+  await user.save();
+};
+
+const loginUserWithIdToken = async (idToken: string): Promise<UserDocument> => {
+  const decoded = await verifyIdToken(idToken);
+  assertFirebaseEmailVerified(decoded);
+  return syncFirebaseUser(decoded, { updateLastLogin: true });
 };
 
 const verifyNumber = async (phoneNumber: string, otpCode: number, email: string): Promise<UserDocument> => {
@@ -135,22 +202,28 @@ const deleteMe = async (password: string, reqUser: UserDocument): Promise<UserDo
 
 export default {
   loginUserWithEmailAndPassword,
+  loginUserWithIdToken,
   logout,
   refreshAuth,
   resetPassword,
   changePassword,
   verifyEmail,
+  verifyEmailWithIdToken,
+  resendEmailVerification,
   verifyNumber,
   deleteMe,
 };
 
 export {
   loginUserWithEmailAndPassword,
+  loginUserWithIdToken,
   logout,
   refreshAuth,
   resetPassword,
   changePassword,
   verifyEmail,
+  verifyEmailWithIdToken,
+  resendEmailVerification,
   verifyNumber,
   deleteMe,
 };

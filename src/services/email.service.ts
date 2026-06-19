@@ -18,6 +18,20 @@ const sendEmail = async (to: string, subject: string, html: string): Promise<voi
   await transport.sendMail(msg);
 };
 
+const sendFirebaseEmailVerificationLink = async (to: string, verificationLink: string): Promise<void> => {
+  const subject = 'Verify your Eternous account';
+  const html = `
+  <body style="background-color: #f3f4f6; padding: 1rem; font-family: Arial, sans-serif;">
+    <div style="max-width: 28rem; margin: 0 auto; background-color: #fff; padding: 1.5rem; border-radius: 0.5rem;">
+      <h1 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Verify your email</h1>
+      <p style="color: #4b5563; margin-bottom: 1rem;">Click the button below to verify your Eternous account.</p>
+      <a href="${verificationLink}" style="display:inline-block;background:#111827;color:#fff;padding:0.75rem 1rem;border-radius:0.375rem;text-decoration:none;">Verify email</a>
+      <p style="color: #6b7280; font-size: 0.875rem; margin-top: 1rem;">If you did not create an account, you can ignore this email.</p>
+    </div>
+  </body>`;
+  await sendEmail(to, subject, html);
+};
+
 const sendEmailVerification = async (to: string, otp: number | string): Promise<void> => {
   const subject = 'User verification code';
   const html = `
@@ -67,6 +81,14 @@ export default {
   sendResetPasswordEmail,
   sendVerificationEmail,
   sendEmailVerification,
+  sendFirebaseEmailVerificationLink,
 };
 
-export { transport, sendEmail, sendResetPasswordEmail, sendVerificationEmail, sendEmailVerification };
+export {
+  transport,
+  sendEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+  sendEmailVerification,
+  sendFirebaseEmailVerificationLink,
+};

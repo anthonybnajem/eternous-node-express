@@ -117,6 +117,35 @@ router.post('/verify-email', validate(authValidation.verifyEmail), authControlle
 
 /**
  * @swagger
+ * /v1/auth/resend-verification:
+ *   post:
+ *     summary: Resend Firebase email verification
+ *     description: Sends a new Firebase email verification link to the user.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       "200":
+ *         description: Verification email sent
+ *       "400":
+ *         $ref: '#/components/responses/BadRequest'
+ *       "429":
+ *         description: Resend cooldown active
+ */
+router.post('/resend-verification', validate(authValidation.resendVerification), authController.resendVerification);
+
+/**
+ * @swagger
  * /v1/auth/reset-password:
  *   post:
  *     summary: Reset password

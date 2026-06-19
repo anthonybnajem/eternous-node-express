@@ -16,6 +16,7 @@ Voice-cloning app: users sign up, build family trees of loved ones, upload voice
 2. **No flow refactor** — Do not change request/auth flows, URL paths, role definitions, or permission model. Keep `auth()`, `auth('common')`, `auth('manageUsers')`, `auth('admin')`, `auth('manageOrders')` exactly as they work today.
 3. **Additive only** — New Eternous features (trees, members, voices, chat, credits, etc.) are **new modules** plugged into the current stack, not a replacement architecture.
 4. **Scope in services** — For new user-owned resources, filter by `req.user.id` in the service layer. Do not introduce new auth middleware or route namespaces unless explicitly requested later.
+5. **Auth target (§0.3)** — Firebase for identity (Google, Apple, Facebook, email, OTP/verification). Mongo for encrypted password copy, `Token`, `Session`, and all API JWTs. Extend existing `/auth/*` paths; do not add new auth namespaces.
 
 **API surfaces:** All paths under `/api/v1`, using the existing route layout.
 
@@ -217,33 +218,138 @@ curl -H "Authorization: Bearer $ADMIN" "$BASE/activities/admin?type=admin_action
 # Server logs show: Activity [admin_action] user=...: Created price plan "..."
 ```
 
+# Server logs show: Activity [admin_action] user=...: Created price plan "..."
+```
+
+---
+
+## 0.3 Firebase + Mongo auth architecture (target)
+
+> **Approved direction:** Firebase Auth handles all identity providers and verification (including email OTP / verification links). MongoDB stores the app user, **bcrypt-encrypted password**, API **JWT tokens**, and **sessions**. API routes always use backend JWT from Mongo — never Firebase `idToken` after the initial exchange.
+
+### Responsibility split
+
+| Layer | Owns |
+|-------|------|
+| **Client (Firebase SDK)** | Google, Apple, Facebook, Email/Password sign-up & sign-in; email verification; password reset UI; resend verification |
+| **Firebase Auth** | OTP / email verification links, social OAuth, `email_verified`, password reset emails |
+| **Backend exchange** | Verify Firebase `idToken` once at register/login → sync Mongo `User` → issue backend JWT |
+| **MongoDB** | `User` (profile, `firebaseUid`, bcrypt `password`), `Token` (access + refresh), `Session` (devices) |
+| **API requests** | `Authorization: Bearer <backend_access_token>` — validated against Mongo `Token` via `middlewares/auth.ts` |
+
+### End-to-end flow
+
+```
+Client Firebase sign-in (any provider)
+    → idToken
+    → POST /auth/register or POST /auth/login { idToken, ... }
+    → firebaseAuth.service.verifyIdToken()
+    → sync Mongo User (firebaseUid, authProvider, isEmailVerified from token)
+    → tokenService.generateAuthTokens() → save refresh Token (+ Session) in Mongo
+    → return { user, tokens: { access, refresh } }
+
+All later API calls
+    → Bearer access token (Mongo JWT)
+    → POST /auth/refresh-tokens { refreshToken } → new pair from Mongo Token
+    → POST /auth/logout { refreshToken } → blacklist Token in Mongo
+```
+
+### Providers
+
+| Provider | Client | Backend on register/login |
+|----------|--------|---------------------------|
+| Google | Firebase `GoogleAuthProvider` | `idToken` → sync Mongo, `authProvider: google` |
+| Apple | Firebase `OAuthProvider('apple.com')` | same |
+| Facebook | Firebase `FacebookAuthProvider` | same |
+| Email | Firebase `createUserWithEmailAndPassword` | `idToken` + **also** store bcrypt `password` in Mongo |
+
+### Passwords in Mongo (encrypted)
+
+- [ ] `User.password` — bcrypt hash via existing `user.model.ts` pre-save (`bcryptjs`) — **never** store plaintext
+- [ ] **Register (email):** create/sync Firebase user **and** persist bcrypt hash in Mongo (same password)
+- [ ] **Login (email):** primary path = client sends Firebase `idToken` after Firebase sign-in; optional fallback = `email` + `password` verified with `user.isPasswordMatch()` then still issue Mongo JWT (no Firebase idToken on API)
+- [ ] **Change password:** update **both** Firebase (`admin.auth().updateUser(uid, { password })`) **and** Mongo bcrypt hash — keep in sync
+- [ ] **Forgot / reset password:** use **Firebase** (`sendPasswordResetEmail` on client); backend `POST /auth/forgot-password` may proxy or document client-only; on reset complete, optionally re-hash in Mongo if user logs in with new password
+
+### OTP & email verification — Firebase, not custom Mongo OTP
+
+- [ ] **Remove / stop using** custom `oneTimeCode` + `oneTimeCodeExpiresAt` for new email signups (legacy fields may remain until migration)
+- [ ] `isEmailVerified` — sync from Firebase token `email_verified` on every `idToken` login/register
+- [ ] Block backend JWT issue for email users until `email_verified === true` (Firebase verification complete)
+- [ ] Resend verification — client calls Firebase `sendEmailVerification()`; optional backend `POST /auth/resend-verification` proxy using Admin SDK / documented client flow
+- [ ] **Do not** build custom 6-digit OTP email flow when Firebase already provides email verification
+
+### Tokens — always from Mongo
+
+- [x] `token.service.ts` — JWT access + refresh, persisted in Mongo `Token` collection
+- [ ] Wire `Token.sessionId` → Mongo `Session` ObjectId (Step 1.5)
+- [ ] `auth()` middleware loads user from JWT `sub` — **not** Firebase token verification on each request
+- [ ] Refresh / logout / revoke — operate on Mongo `Token` (+ `Session`), not Firebase sessions
+
+### Legacy vs target (current codebase)
+
+| Today | Target |
+|-------|--------|
+| Dual path: `idToken` OR raw `email`+`password` register | Prefer `idToken`; keep `email`+`password` register with Mongo bcrypt + Firebase user create |
+| Custom `oneTimeCode` verify | Firebase email verification |
+| `loginUserWithEmailAndPassword` in Mongo only | Mongo password check **synced** with Firebase; login returns Mongo JWT |
+| Partial Firebase sync | Full provider matrix: google, apple, facebook, email |
+
+### Config
+
+- [x] `config/firebase.ts` — Admin SDK (service account)
+- [x] `GET /firebase-config` — web SDK config for client
+- [ ] Enable Email/Password + Google + Apple + Facebook in Firebase Console
+- [ ] Document client integration in `requirements/` or README (Firebase SDK init, provider buttons)
+
+### Tasks checklist (auth alignment)
+
+- [ ] `firebaseAuth.service.ts` — `createFirebaseUser`, `updateFirebasePassword`, `sendVerificationEmail` helpers
+- [ ] `user.service.ts` / `auth.service.ts` — register: Firebase + Mongo bcrypt in one flow
+- [ ] `auth.service.ts` — login: accept `idToken` (primary) or email+password (Mongo verify → Mongo JWT)
+- [ ] `auth.service.ts` — changePassword: Firebase Admin `updateUser` + Mongo bcrypt
+- [ ] `auth.controller.ts` — align register/login/change-password/verify with §0.3; deprecate numeric OTP verify
+- [ ] `auth.validation.ts` — `idToken` schema; optional `resendVerification` (email)
+- [ ] Migration note: existing users with `oneTimeCode` only — force Firebase verify on next login
+
 ---
 
 ## 1. Authentication & onboarding
 
-> Email, Google, Facebook, Apple. OTP verify on signup. Resend OTP. No chat sessions in DB.
+> **§0.3:** Firebase for Google, Apple, Facebook, Email auth + email verification/OTP. Mongo for bcrypt passwords, `Token`, `Session`. API JWTs from Mongo only.
 
 ### DB
-- [x] `User`: `username`, `creditBalance`, `oneTimeCodeExpiresAt` fields added
+- [x] `User`: `username`, `creditBalance` fields added
 - [x] `User`: `authProvider` covers email | google | facebook | apple | firebase
-- [ ] OTP fields: enforce expiry in service (field added; logic in Phase 1.3)
+- [x] `User.password` — bcrypt via mongoose pre-save (existing)
+- [x] `User.firebaseUid` — link to Firebase Auth user
+- [~] `oneTimeCode`, `oneTimeCodeExpiresAt` — **legacy; deprecate** per §0.3 (use Firebase verification)
 - [x] Index: `User.username`; email/firebaseUid already indexed
+- [ ] `Token` — refresh tokens in Mongo (existing); link `sessionId` → `Session` (Step 1.5)
 
 ### Models
-- [x] `user.model.ts` — username, creditBalance, oneTimeCodeExpiresAt, isUsernameTaken
+- [x] `user.model.ts` — username, creditBalance, `isPasswordMatch()`, firebaseUid
 - [x] `settings.model.ts` — wired to signup via `settings.service.ts`
+- [~] `token.model.ts` — sessionId currently string UUID → ObjectId ref Session (Step 1.5)
+- [~] `session.model.ts` — schema exists; wire on login (Step 1.5)
 
 ### Services
-- [~] `firebaseAuth.service.ts` — sync Google/Facebook/Apple via Firebase token
-- [ ] `auth.service.ts` — OTP generate with expiry (e.g. 3–10 min), validate, resend (rate-limited)
-- [ ] `auth.service.ts` — block login until `isEmailVerified` (email provider only)
-- [ ] `email.service.ts` / SMS — send OTP; resend clears old OTP and sets new expiry
+- [~] `firebaseAuth.service.ts` — verify idToken, sync providers, create user, verification link helpers ✅
+- [x] `firebaseAuth.service.ts` — `createFirebaseEmailUser`, `sendFirebaseEmailVerification`, `assertFirebaseEmailVerified`
+- [ ] `auth.service.ts` — login via `idToken` (primary) or email+password (Mongo bcrypt → Mongo JWT)
+- [ ] `auth.service.ts` — register: Firebase user + Mongo user + bcrypt password in sync
+- [ ] `auth.service.ts` — `changePassword`: Firebase Admin `updateUser` + Mongo bcrypt (dual write)
+- [x] `auth.service.ts` — block JWT until `email_verified` from Firebase (email provider)
+- [x] `auth.service.ts` — `verifyEmailWithIdToken`, `resendEmailVerification`; legacy OTP kept for migration
 - [x] `settings.service.ts` — `ensureDefaultSettings` on register (email + Firebase)
+- [~] `token.service.ts` — JWT in Mongo `Token`; wire Session on generate (Step 1.5)
 
 ### Controllers
-- [~] `auth.controller.ts` — register, login, verify-email, logout, refresh, delete-me
-- [ ] `auth.controller.ts` — `POST /auth/resend-otp` (email or phone)
-- [ ] `auth.controller.ts` — social providers via Firebase `idToken` (already partial)
+- [~] `auth.controller.ts` — register, login, logout, refresh, delete-me
+- [x] `auth.controller.ts` — register/login block unverified email users from receiving Mongo JWT
+- [x] `auth.controller.ts` — `POST /auth/resend-verification` (Firebase email verify resend)
+- [x] `auth.controller.ts` — `POST /auth/verify-email` accepts `{ idToken }` (+ legacy OTP fallback)
+- [ ] `auth.controller.ts` — `changePassword` / forgot / reset aligned with Firebase (Step 1.4)
 
 ### Routes / APIs
 
@@ -251,20 +357,20 @@ curl -H "Authorization: Bearer $ADMIN" "$BASE/activities/admin?type=admin_action
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| POST | `/auth/register` | Public | [~] | Email + Firebase; OTP flow for email |
-| POST | `/auth/login` | Public | [~] | |
-| POST | `/auth/verify-email` | Public | [~] | Add expiry check |
-| POST | `/auth/resend-otp` | Public | [ ] | Rate-limited resend |
-| POST | `/auth/refresh-tokens` | Public | [~] | |
-| POST | `/auth/logout` | User | [~] | |
-| POST | `/auth/forgot-password` | Public | [~] | |
-| POST | `/auth/reset-password` | Public | [~] | |
-| POST | `/auth/change-password` | User | [~] | Prefer `/users/me/change-password` |
-| POST | `/auth/delete-me` | User | [~] | |
+| POST | `/auth/register` | Public | [~] | `{ idToken }` or `{ email, password, fullName }` → Firebase + Mongo bcrypt |
+| POST | `/auth/login` | Public | [~] | `{ idToken }` primary; or `{ email, password }` → Mongo verify → Mongo JWT |
+| POST | `/auth/verify-email` | Public | [~] | `{ idToken }` after Firebase email verify — not numeric OTP |
+| POST | `/auth/resend-verification` | Public | [x] | Firebase resend (replaces `/auth/resend-otp`) |
+| POST | `/auth/refresh-tokens` | Public | [~] | Refresh token from Mongo `Token` |
+| POST | `/auth/logout` | User | [~] | Blacklist Mongo refresh `Token` |
+| POST | `/auth/forgot-password` | Public | [~] | Firebase password reset (client or proxy) |
+| POST | `/auth/reset-password` | Public | [~] | Firebase oobCode flow / client-handled |
+| POST | `/auth/change-password` | User | [~] | Dual: Firebase `updateUser` + Mongo bcrypt |
+| POST | `/auth/delete-me` | User | [~] | Delete Firebase user + soft-delete Mongo |
 
 ### Validations
-- [~] `auth.validation.ts` — add `resendOtp` schema (email)
-- [ ] OTP: 6-digit string/number, expiry enforcement in service
+- [~] `auth.validation.ts` — `idToken` on register/login; `resendVerification` (email)
+- [ ] Deprecate numeric OTP schemas in favor of Firebase verification flow
 
 #### Step 1.1 — Model alignment + exports ✅ DONE
 
@@ -292,30 +398,65 @@ curl -X POST http://localhost:3000/api/v1/auth/register \
 # Mongo: db.settings.findOne({ userId: <new_user_id> }) → notificationsEnabled: true
 ```
 
-#### Step 1.3 — OTP expiry + resend
+#### Step 1.3 — Firebase email verification (replaces custom OTP) ✅ DONE
 
-**Commit:** `feat(auth): add OTP expiry and resend-otp endpoint`
+**Commit:** `feat(auth): use Firebase email verification instead of custom OTP`
 
 **Test:**
 ```bash
-# Register → note oneTimeCodeExpiresAt in Mongo
-# Wait past expiry OR set expiresAt in past → POST /auth/verify-email → 400 OTP expired
-curl -X POST http://localhost:3000/api/v1/auth/resend-otp \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com"}'
-# New code in email/logs; old code invalid
+# Client: Firebase createUserWithEmailAndPassword → sendEmailVerification()
+# Before verify: POST /auth/login { idToken } → 400 email not verified
+
+# After verify in Firebase: POST /auth/login { idToken }
+# → 200, Mongo JWT tokens; User.isEmailVerified:true
+
+# Optional resend:
+curl -X POST http://localhost:3000/api/v1/auth/resend-verification \
+  -H "Content-Type: application/json" -d '{"email":"test@example.com"}'
+# → Firebase verification email resent (rate-limited)
 ```
 
-#### Step 1.4 — Session on login (devices)
+#### Step 1.4 — Mongo bcrypt passwords + Firebase password sync
 
-**Commit:** `feat(auth): track login sessions for logged-in devices`
+**Commit:** `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password`
 
 **Test:**
 ```bash
-# Login twice (different User-Agent headers)
+# Register email user (Firebase + Mongo):
+curl -X POST http://localhost:3000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password1","fullName":"Test User"}'
+# Mongo: User.password is bcrypt hash (not plaintext)
+# Firebase Console: user exists with same email
+
+# Login with email+password → Mongo JWT (not Firebase idToken on API):
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -d '{"email":"test@example.com","password":"Password1"}'
+# → { tokens: { access, refresh } } from Mongo Token collection
+
+# Change password — both updated:
+curl -X POST http://localhost:3000/api/v1/auth/change-password \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{"currentPassword":"Password1","newPassword":"Password2","confirmNewPassword":"Password2"}'
+# Mongo bcrypt changed; Firebase password updated; old refresh tokens invalidated
+```
+
+#### Step 1.5 — Session on login + Mongo tokens
+
+**Commit:** `feat(auth): track login sessions and link refresh tokens in Mongo`
+
+**Test:**
+```bash
+# Login with idToken or email+password twice (different User-Agent)
 curl -X POST http://localhost:3000/api/v1/auth/login ... -H "User-Agent: Chrome/Mac"
-# Mongo: db.sessions.find({ userId }) → 2 active sessions with deviceName/type
-# GET /users/me/devices (when built) lists both
+# Mongo: db.sessions.find({ userId }) → 2 active sessions
+# Mongo: db.tokens.find({ user, type: 'refresh' }) → tokens linked to sessionId
+
+curl -X POST http://localhost:3000/api/v1/auth/refresh-tokens \
+  -d '{"refreshToken":"<refresh>"}'
+# → new access token; validated against Mongo Token doc
+
+# GET /users/me/devices (when built) lists both sessions
 ```
 
 ---
@@ -1396,8 +1537,9 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" $BASE/admin/analytics
 Phase 1 — Foundation
   1.1  Model alignment + index.ts exports + migrations
   1.2  Settings auto-create on signup
-  1.3  OTP expiry + resend
-  1.4  Session model wired to login (devices list)
+  1.3  Firebase email verification (replace custom OTP) — §0.3
+  1.4  Mongo bcrypt passwords + Firebase password sync on register/change-password — §0.3
+  1.5  Session model + Mongo Token/refresh wired to login (devices list)
 
 Phase 2 — Core product
   2.1  Trees CRUD + duplicate + images
@@ -1444,12 +1586,13 @@ Phase 6 — Security & polish
 - [ ] Update: `user`, `member`, `notification`, `payment`, `subscription`, `subscriptionPlan`
 
 ### Services
+- [x] `activity.service.ts` — audit log helper (§0.2)
 - [ ] `tree.service.ts`
 - [ ] `member.service.ts`
 - [ ] `memberRelationType.service.ts`
 - [ ] `voice.service.ts`
 - [ ] `chat.service.ts`
-- [ ] `settings.service.ts`
+- [x] `settings.service.ts`
 - [ ] `session.service.ts`
 - [ ] `twoFactor.service.ts`
 - [ ] `credit.service.ts`
@@ -1514,9 +1657,19 @@ OPENAI_API_KEY=
 VOICE_CLONE_API_URL=
 VOICE_CLONE_API_KEY=
 
-# OTP
-OTP_EXPIRATION_MINUTES=10
-OTP_RESEND_COOLDOWN_SECONDS=60
+# Firebase Auth (§0.3) — service account + web SDK (see config.ts / .env.example)
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_WEB_API_KEY=
+FIREBASE_WEB_AUTH_DOMAIN=
+FIREBASE_WEB_APP_ID=
+# Resend verification rate limit (backend proxy only)
+AUTH_RESEND_VERIFICATION_COOLDOWN_SECONDS=60
+
+# Legacy OTP — deprecated; use Firebase email verification (§0.3)
+# OTP_EXPIRATION_MINUTES=10
+# OTP_RESEND_COOLDOWN_SECONDS=60
 
 # Storage
 S3_BUCKET_NAME=          # already in config
@@ -1543,8 +1696,9 @@ CREDITS_LOW_THRESHOLD=10
 
 | Area | Status |
 |------|--------|
-| Firebase auth sync | [~] Partial |
-| JWT refresh tokens | [~] Partial (Session not wired) |
+| Firebase auth sync | [~] Partial — target §0.3 (all providers + verification) |
+| Mongo bcrypt passwords | [~] Model exists; dual Firebase sync pending (Step 1.4) |
+| JWT / API tokens | [~] Mongo `Token` — Session link pending (Step 1.5) |
 | Stripe checkout + webhooks | [~] Subscription sync only |
 | SubscriptionPlan CRUD | [~] On `/subscriptions/price-plans` + `manageUsers` |
 | Auth / roles / routes | [x] **Frozen** — no code or flow refactor (Project rules) |
@@ -1571,8 +1725,9 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords.
 | **0.1** | `chore: add migrations and seed member relation types` | `npm run seed:relation-types` → 13 relation types in Mongo |
 | **1.1** ✅ | `feat(models): align Eternous schemas and export all models` | `npm run typecheck`; `GET /activities` → 401 without token |
 | **1.2** ✅ | `feat(auth): create default Settings on user registration` | Register user → `db.settings.findOne({ userId })` exists |
-| **1.3** | `feat(auth): add OTP expiry and resend-otp endpoint` | Expired OTP → 400; `POST /auth/resend-otp` → new code |
-| **1.4** | `feat(auth): track login sessions for logged-in devices` | Login twice → 2 `sessions` docs; devices list when built |
+| **1.3** ✅ | `feat(auth): use Firebase email verification instead of custom OTP` | Unverified email → 400; after Firebase verify → login + Mongo JWT |
+| **1.4** | `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password` | bcrypt in Mongo; change-password updates Firebase + Mongo |
+| **1.5** | `feat(auth): track login sessions and link refresh tokens in Mongo` | Login twice → sessions + Token docs; refresh from Mongo |
 | **2.1** | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user |
 | **2.2** | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree |
 | **2.3** | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member |
@@ -1599,4 +1754,4 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords.
 
 ---
 
-*Last updated: 2026-06-19 — §21: Commit & Test on every step; §0: keep current roles/auth, no route refactor.*
+*Last updated: 2026-06-19 — §0.3: Firebase identity + Mongo passwords/tokens; §21: Commit & Test on every step.*

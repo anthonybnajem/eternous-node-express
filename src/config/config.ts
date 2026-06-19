@@ -62,6 +62,9 @@ const envVarsSchema = Joi.object()
       .description('Frequency of log reports'),
     LOG_REPORT_DAYS: Joi.number().default(7).description('Number of days to include in log report'),
     LOG_REPORT_RECIPIENTS: Joi.string().description('Comma-separated list of email recipients for log reports'),
+    AUTH_RESEND_VERIFICATION_COOLDOWN_SECONDS: Joi.number()
+      .default(60)
+      .description('Cooldown before resending Firebase email verification'),
     LOG_REPORT_TIMEZONE: Joi.string().default('UTC').description('Timezone for scheduled reports'),
   })
   .unknown();
@@ -137,6 +140,9 @@ const config = {
       ? envVars.LOG_REPORT_RECIPIENTS.split(',').map((email: string) => email.trim())
       : [],
     timezone: envVars.LOG_REPORT_TIMEZONE,
+  },
+  auth: {
+    resendVerificationCooldownSeconds: envVars.AUTH_RESEND_VERIFICATION_COOLDOWN_SECONDS,
   },
   name: 'Node.js Backend Boilerplate',
 };

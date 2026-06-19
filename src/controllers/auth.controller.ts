@@ -4,13 +4,14 @@ import catchAsync from '../utils/catchAsync.ts';
 import ApiError from '../utils/ApiError.ts';
 import response from '../config/response.ts';
 import { authService, userService, tokenService, emailService, activityService } from '../services/index.ts';
-import { deleteFirebaseUser, syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service.ts';
+import { deleteFirebaseUser, syncFirebaseUser, verifyIdToken, assertFirebaseEmailVerified } from '../services/firebaseAuth.service.ts';
 import type {
   ChangePasswordBody,
   DeleteMeBody,
   ForgotPasswordBody,
   LoginBody,
   RegisterBody,
+  ResendVerificationBody,
   ResetPasswordBody,
   VerifyEmailBody,
 } from '../types/auth.ts';
@@ -18,17 +19,15 @@ import type {
 type EmptyParams = Record<string, never>;
 type EmptyQuery = Record<string, never>;
 
-const getClientMetadata = (req: Pick<Request, 'ip' | 'get'>): { userAgent?: string; ipAddress?: string } => ({
-  userAgent: req.get('user-agent') ?? undefined,
-  ipAddress: req.ip,
-});
-
 const isFirebaseAuth = (body: RegisterBody | LoginBody): body is RegisterBody & { idToken: string } => {
   return typeof body.idToken === 'string' && body.idToken.length > 0;
 };
 
-const syncFirebaseAuth = async (idToken: string, fullName?: string) => {
+const syncFirebaseAuth = async (idToken: string, fullName?: string, options: { requireVerified?: boolean } = {}) => {
   const decoded = await verifyIdToken(idToken);
+  if (options.requireVerified ?? true) {
+    assertFirebaseEmailVerified(decoded);
+  }
   const user = await syncFirebaseUser(decoded, { updateLastLogin: true });
 
   if (fullName && fullName.trim() && !user.fullName?.trim()) {
@@ -37,6 +36,38 @@ const syncFirebaseAuth = async (idToken: string, fullName?: string) => {
   }
 
   return user;
+};
+
+const respondWithAuth = (
+  res: Response,
+  user: Awaited<ReturnType<typeof syncFirebaseAuth>>,
+  req: Pick<Request, 'ip' | 'get'>,
+  statusCode: number,
+  message: string
+) => {
+  return tokenService
+    .generateAuthTokens(user, undefined, undefined, req.get('user-agent') ?? undefined, req.ip)
+    .then((tokens) => {
+      res.status(statusCode).json(
+        response({
+          message,
+          status: 'OK',
+          statusCode,
+          data: { user, tokens },
+        })
+      );
+    });
+};
+
+const respondPendingVerification = (res: Response, user: Awaited<ReturnType<typeof handleLegacyRegister>>, message: string) => {
+  res.status(httpStatus.CREATED).json(
+    response({
+      message,
+      status: 'OK',
+      statusCode: httpStatus.CREATED,
+      data: { user, requiresEmailVerification: true },
+    })
+  );
 };
 
 const handleLegacyRegister = async (body: RegisterBody) => {
@@ -74,11 +105,28 @@ const handleLegacyRegister = async (body: RegisterBody) => {
 };
 
 const register = catchAsync<EmptyParams, unknown, RegisterBody, EmptyQuery>(async (req, res: Response): Promise<void> => {
-  const user = isFirebaseAuth(req.body)
-    ? await syncFirebaseAuth(req.body.idToken, req.body.fullName)
-    : await handleLegacyRegister(req.body);
-  const { userAgent, ipAddress } = getClientMetadata(req);
-  const tokens = await tokenService.generateAuthTokens(user, undefined, undefined, userAgent, ipAddress);
+  if (isFirebaseAuth(req.body)) {
+    const decoded = await verifyIdToken(req.body.idToken);
+    const user = await syncFirebaseAuth(req.body.idToken, req.body.fullName, { requireVerified: false });
+
+    await activityService.recordActivityFromRequest(
+      req,
+      user.id,
+      'register',
+      `${user.email} registered successfully`,
+      { authProvider: user.authProvider }
+    );
+
+    if (!decoded.email_verified && decoded.firebase?.sign_in_provider === 'password') {
+      respondPendingVerification(res, user, 'Registration successful. Please verify your email before logging in.');
+      return;
+    }
+
+    await respondWithAuth(res, user, req, httpStatus.CREATED, 'Authentication successful');
+    return;
+  }
+
+  const user = await handleLegacyRegister(req.body);
 
   await activityService.recordActivityFromRequest(
     req,
@@ -88,19 +136,17 @@ const register = catchAsync<EmptyParams, unknown, RegisterBody, EmptyQuery>(asyn
     { authProvider: user.authProvider }
   );
 
-  res.status(httpStatus.CREATED).json(
-    response({
-      message: 'Authentication successful',
-      status: 'OK',
-      statusCode: httpStatus.CREATED,
-      data: { user, tokens },
-    })
-  );
+  if (!user.isEmailVerified) {
+    respondPendingVerification(res, user, 'Registration successful. Please verify your email before logging in.');
+    return;
+  }
+
+  await respondWithAuth(res, user, req, httpStatus.CREATED, 'Authentication successful');
 });
 
 const login = catchAsync<EmptyParams, unknown, LoginBody, EmptyQuery>(async (req, res: Response): Promise<void> => {
   const user = isFirebaseAuth(req.body)
-    ? await syncFirebaseAuth(req.body.idToken)
+    ? await authService.loginUserWithIdToken(req.body.idToken)
     : await authService.loginUserWithEmailAndPassword(req.body.email ?? '', req.body.password ?? '');
 
   if (user.isDeleted === true) {
@@ -113,9 +159,6 @@ const login = catchAsync<EmptyParams, unknown, LoginBody, EmptyQuery>(async (req
   user.lastLogin = new Date();
   await user.save();
 
-  const { userAgent, ipAddress } = getClientMetadata(req);
-  const tokens = await tokenService.generateAuthTokens(user, undefined, undefined, userAgent, ipAddress);
-
   await activityService.recordActivityFromRequest(
     req,
     user.id,
@@ -124,14 +167,7 @@ const login = catchAsync<EmptyParams, unknown, LoginBody, EmptyQuery>(async (req
     { authProvider: user.authProvider }
   );
 
-  res.status(httpStatus.OK).json(
-    response({
-      message: 'Login Successful',
-      status: 'OK',
-      statusCode: httpStatus.OK,
-      data: { user, tokens },
-    })
-  );
+  await respondWithAuth(res, user, req, httpStatus.OK, 'Login Successful');
 });
 
 const logout = catchAsync(async (req: Request, res: Response): Promise<void> => {
@@ -239,15 +275,25 @@ const changePassword = catchAsync<EmptyParams, unknown, ChangePasswordBody, Empt
   }
 );
 
-const sendVerificationEmail = catchAsync(async (_req: Request, res: Response): Promise<void> => {
-  res.status(httpStatus.NOT_IMPLEMENTED).send({ message: 'Verification email endpoint not implemented' });
-});
+const sendVerificationEmail = catchAsync<EmptyParams, unknown, ResendVerificationBody, EmptyQuery>(
+  async (req, res: Response): Promise<void> => {
+    await authService.resendEmailVerification(req.body);
+    res.status(httpStatus.OK).json(
+      response({
+        message: 'Verification email sent',
+        status: 'OK',
+        statusCode: httpStatus.OK,
+        data: {},
+      })
+    );
+  }
+);
+
+const resendVerification = sendVerificationEmail;
 
 const verifyEmail = catchAsync<EmptyParams, unknown, VerifyEmailBody, Record<string, unknown>>(
   async (req, res: Response): Promise<void> => {
     const user = await authService.verifyEmail(req.body, req.query);
-    const { userAgent, ipAddress } = getClientMetadata(req);
-    const tokens = await tokenService.generateAuthTokens(user, undefined, undefined, userAgent, ipAddress);
 
     await activityService.recordActivityFromRequest(
       req,
@@ -257,14 +303,7 @@ const verifyEmail = catchAsync<EmptyParams, unknown, VerifyEmailBody, Record<str
       { authProvider: user.authProvider }
     );
 
-    res.status(httpStatus.OK).json(
-      response({
-        message: 'Email Verified',
-        status: 'OK',
-        statusCode: httpStatus.OK,
-        data: { user, tokens },
-      })
-    );
+    await respondWithAuth(res, user, req, httpStatus.OK, 'Email Verified');
   }
 );
 
@@ -315,6 +354,7 @@ export default {
   forgotPassword,
   resetPassword,
   sendVerificationEmail,
+  resendVerification,
   verifyEmail,
   deleteMe,
   changePassword,
@@ -328,6 +368,7 @@ export {
   forgotPassword,
   resetPassword,
   sendVerificationEmail,
+  resendVerification,
   verifyEmail,
   deleteMe,
   changePassword,

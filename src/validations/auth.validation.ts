@@ -67,10 +67,22 @@ const changePassword = {
   }),
 };
 
+const firebaseVerifyEmail = Joi.object().keys({
+  idToken: Joi.string().required(),
+}).unknown(false);
+
+const legacyVerifyEmail = Joi.object().keys({
+  email: Joi.string().required().email(),
+  oneTimeCode: Joi.alternatives().try(Joi.string(), Joi.number()).required(),
+}).unknown(false);
+
 const verifyEmail = {
+  body: Joi.alternatives().try(firebaseVerifyEmail, legacyVerifyEmail),
+};
+
+const resendVerification = {
   body: Joi.object().keys({
-    email: Joi.string().required(),
-    oneTimeCode: Joi.string().required(),
+    email: Joi.string().email().required(),
   }),
 };
 
@@ -88,8 +100,9 @@ export default {
   forgotPassword,
   resetPassword,
   verifyEmail,
+  resendVerification,
   deleteMe,
   changePassword,
 };
 
-export { register, login, logout, refreshTokens, forgotPassword, resetPassword, verifyEmail, deleteMe, changePassword };
+export { register, login, logout, refreshTokens, forgotPassword, resetPassword, verifyEmail, resendVerification, deleteMe, changePassword };

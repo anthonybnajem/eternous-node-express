@@ -3,8 +3,14 @@ import type { FilterQuery } from 'mongoose';
 import { User } from '../models/index.ts';
 import type { UserAttrs, UserDocument } from '../models/user.model.ts';
 import ApiError from '../utils/ApiError.ts';
-import { sendEmailVerification } from './email.service.ts';
+import logger from '../config/logger.ts';
 import { ensureDefaultSettings } from './settings.service.ts';
+import { sendEmailVerification } from './email.service.ts';
+import {
+  createFirebaseEmailUser,
+  isFirebaseConfigured,
+  sendFirebaseEmailVerification,
+} from './firebaseAuth.service.ts';
 import type { AnyRecord, ObjectIdLike, PaginationOptions, UploadedFileInfo } from '../types/common.ts';
 
 export type UserCreateBody = Partial<UserAttrs> & Pick<UserAttrs, 'email'>;
@@ -19,13 +25,37 @@ const createUser = async (userBody: UserCreateBody): Promise<UserDocument> => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
 
-  const oneTimeCode = createOneTimeCode();
+  let firebaseUid: string | undefined;
+  let emailVerificationSentAt: Date | null = null;
 
-  if (shouldSendEmailVerification(userBody.role)) {
-    await sendEmailVerification(userBody.email, oneTimeCode);
+  if (userBody.password && isFirebaseConfigured()) {
+    try {
+      const firebaseUser = await createFirebaseEmailUser({
+        email: userBody.email,
+        password: userBody.password,
+        displayName: userBody.fullName,
+      });
+      firebaseUid = firebaseUser.uid;
+      try {
+        await sendFirebaseEmailVerification(userBody.email);
+        emailVerificationSentAt = new Date();
+      } catch (error) {
+        logger.warn('Failed to send Firebase verification email during registration:', error);
+      }
+    } catch (error) {
+      logger.error('Failed to create Firebase user during registration:', error);
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Failed to create authentication account');
+    }
   }
 
-  const user = await User.create({ ...userBody, oneTimeCode });
+  const user = await User.create({
+    ...userBody,
+    firebaseUid,
+    authProvider: userBody.authProvider ?? 'email',
+    isEmailVerified: false,
+    oneTimeCode: null,
+    emailVerificationSentAt,
+  });
   await ensureDefaultSettings(user.id, user.email);
   return user;
 };
@@ -96,6 +126,17 @@ const isUpdateUser = async (userId: ObjectIdLike, updateBody: UserUpdateBody): P
 
   if (updateBody.email && shouldSendEmailVerification(updateBody.role)) {
     await sendEmailVerification(updateBody.email, oneTimeCode);
+  } else if (updateBody.password && isFirebaseConfigured()) {
+    const firebaseUser = await createFirebaseEmailUser({
+      email: user.email,
+      password: updateBody.password,
+      displayName: updateBody.fullName ?? user.fullName,
+    });
+    await sendFirebaseEmailVerification(user.email);
+    Object.assign(updateBody, {
+      firebaseUid: firebaseUser.uid,
+      emailVerificationSentAt: new Date(),
+    });
   }
 
   Object.assign(user, updateBody, {

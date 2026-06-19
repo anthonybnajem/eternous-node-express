@@ -4,6 +4,21 @@ import app from '../../src/app.ts';
 import { connectDB, closeDB } from '../../src/config/database.ts';
 import User from '../../src/models/user.model.ts';
 
+const getAuthPayload = (body: Record<string, unknown>) => {
+  const data = body.data as {
+    attributes?: Record<string, unknown>;
+    token?: Record<string, unknown>;
+  };
+  const attributes = data?.attributes;
+  const tokens = data?.token ?? attributes?.tokens;
+  return {
+    user: attributes?.user,
+    tokens,
+    requiresEmailVerification: attributes?.requiresEmailVerification,
+    message: body.message as string,
+  };
+};
+
 beforeAll(async () => {
   await connectDB();
 });
@@ -32,37 +47,28 @@ describe('Auth routes', () => {
       };
     });
 
-    test('should return 201 and successfully register user if request data is ok', async () => {
+    test('should return 201 and register user without tokens until email is verified', async () => {
       const res = await request(app).post('/api/v1/auth/register').send(newUser).expect(httpStatus.CREATED);
 
-      expect(res.body.user).not.toHaveProperty('password');
-      expect(res.body.user).toEqual({
-        id: expect.anything(),
+      const payload = getAuthPayload(res.body);
+      expect(payload.user).toMatchObject({
         fullName: newUser.fullName,
         email: newUser.email,
         role: 'user',
         isEmailVerified: false,
         isActive: true,
         isDeleted: false,
-        createdAt: expect.anything(),
       });
+      expect(payload.user).not.toHaveProperty('password');
+      expect(payload.requiresEmailVerification).toBe(true);
+      expect(payload.tokens).toBeUndefined();
 
-      const dbUser = await User.findById(res.body.user.id);
+      const dbUser = await User.findById((payload.user as { id: string }).id);
       expect(dbUser).not.toBeNull();
       if (!dbUser) {
         throw new Error('Expected user to exist');
       }
       expect(dbUser.password).not.toBe(newUser.password);
-      expect(dbUser).toMatchObject({
-        fullName: newUser.fullName,
-        email: newUser.email,
-        role: 'user',
-      });
-
-      expect(res.body.tokens).toEqual({
-        access: { token: expect.anything(), expires: expect.anything() },
-        refresh: { token: expect.anything(), expires: expect.anything() },
-      });
     });
 
     test('should return 400 error if email is invalid', async () => {
@@ -72,7 +78,7 @@ describe('Auth routes', () => {
     });
 
     test('should return 400 error if email is already used', async () => {
-      await User.create(newUser);
+      await User.create({ ...newUser, isEmailVerified: true });
 
       await request(app).post('/api/v1/auth/register').send(newUser).expect(httpStatus.BAD_REQUEST);
     });
@@ -95,11 +101,12 @@ describe('Auth routes', () => {
   });
 
   describe('POST /api/v1/auth/login', () => {
-    test('should return 200 and login user if email and password match', async () => {
+    test('should return 200 and login verified user if email and password match', async () => {
       const newUser = {
         fullName: 'Test User',
         email: 'test@example.com',
         password: 'Password123!',
+        isEmailVerified: true,
       };
 
       await User.create(newUser);
@@ -111,21 +118,36 @@ describe('Auth routes', () => {
 
       const res = await request(app).post('/api/v1/auth/login').send(loginCredentials).expect(httpStatus.OK);
 
-      expect(res.body.user).toEqual({
-        id: expect.anything(),
+      const payload = getAuthPayload(res.body);
+      expect(payload.user).toMatchObject({
         fullName: newUser.fullName,
         email: newUser.email,
         role: 'user',
-        isEmailVerified: false,
+        isEmailVerified: true,
         isActive: true,
         isDeleted: false,
-        createdAt: expect.anything(),
       });
 
-      expect(res.body.tokens).toEqual({
+      expect(payload.tokens).toEqual({
         access: { token: expect.anything(), expires: expect.anything() },
         refresh: { token: expect.anything(), expires: expect.anything() },
       });
+    });
+
+    test('should return 400 if email is not verified', async () => {
+      await User.create({
+        fullName: 'Test User',
+        email: 'test@example.com',
+        password: 'Password123!',
+        isEmailVerified: false,
+      });
+
+      const res = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'test@example.com', password: 'Password123!' })
+        .expect(httpStatus.BAD_REQUEST);
+
+      expect(res.body.message).toBe('Email not verified');
     });
 
     test('should return 401 error if there are no users with that email', async () => {
@@ -143,16 +165,15 @@ describe('Auth routes', () => {
     });
 
     test('should return 401 error if password is wrong', async () => {
-      const newUser = {
+      await User.create({
         fullName: 'Test User',
         email: 'test@example.com',
         password: 'Password123!',
-      };
-
-      await User.create(newUser);
+        isEmailVerified: true,
+      });
 
       const loginCredentials = {
-        email: newUser.email,
+        email: 'test@example.com',
         password: 'WrongPassword123!',
       };
 
