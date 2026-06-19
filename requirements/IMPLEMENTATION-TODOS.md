@@ -20,7 +20,7 @@ Voice-cloning app: users sign up, build family trees of loved ones, upload voice
 
 **API surfaces:** All paths under `/api/v1`, using the existing route layout.
 
-**At the end of each step:** copy the **Commit** line for `git commit`, then run the **Test** block (paste in terminal or chat). Expect the status codes / shapes noted in each step.
+**At the end of each step:** copy the **Commit** line for `git commit`, run the **Test** block, then run the **Flow test** script (§22) — chained curls that reuse tokens and ids from responses.
 
 ---
 
@@ -125,6 +125,9 @@ npm run seed:relation-types
 # Mongo: db.memberrelationtypes.find() → 13 docs (father, mother, …)
 ```
 
+**Flow test:** `npm run test:flow -- 0.1`  
+Script: `scripts/test-flows/step-0.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 ---
 
 ## 0.2 Activity & audit logging (cross-cutting)
@@ -218,6 +221,9 @@ curl -H "Authorization: Bearer $ADMIN" "$BASE/activities/admin?type=admin_action
 # Server logs show: Activity [admin_action] user=...: Created price plan "..."
 ```
 
+**Flow test:** `npm run test:flow -- 0.2`  
+Script: `scripts/test-flows/step-0.2.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 # Server logs show: Activity [admin_action] user=...: Created price plan "..."
 ```
 
@@ -304,10 +310,10 @@ All later API calls
 
 ### Tasks checklist (auth alignment)
 
-- [ ] `firebaseAuth.service.ts` — `createFirebaseUser`, `updateFirebasePassword`, `sendVerificationEmail` helpers
-- [ ] `user.service.ts` / `auth.service.ts` — register: Firebase + Mongo bcrypt in one flow
+- [x] `firebaseAuth.service.ts` — `createFirebaseUser`, `updateFirebasePassword`, `sendVerificationEmail` helpers
+- [x] `user.service.ts` / `auth.service.ts` — register: Firebase + Mongo bcrypt in one flow
 - [ ] `auth.service.ts` — login: accept `idToken` (primary) or email+password (Mongo verify → Mongo JWT)
-- [ ] `auth.service.ts` — changePassword: Firebase Admin `updateUser` + Mongo bcrypt
+- [x] `auth.service.ts` — changePassword: Firebase Admin `updateUser` + Mongo bcrypt
 - [ ] `auth.controller.ts` — align register/login/change-password/verify with §0.3; deprecate numeric OTP verify
 - [ ] `auth.validation.ts` — `idToken` schema; optional `resendVerification` (email)
 - [ ] Migration note: existing users with `oneTimeCode` only — force Firebase verify on next login
@@ -334,11 +340,11 @@ All later API calls
 - [~] `session.model.ts` — schema exists; wire on login (Step 1.5)
 
 ### Services
-- [~] `firebaseAuth.service.ts` — verify idToken, sync providers, create user, verification link helpers ✅
-- [x] `firebaseAuth.service.ts` — `createFirebaseEmailUser`, `sendFirebaseEmailVerification`, `assertFirebaseEmailVerified`
-- [ ] `auth.service.ts` — login via `idToken` (primary) or email+password (Mongo bcrypt → Mongo JWT)
-- [ ] `auth.service.ts` — register: Firebase user + Mongo user + bcrypt password in sync
-- [ ] `auth.service.ts` — `changePassword`: Firebase Admin `updateUser` + Mongo bcrypt (dual write)
+- [x] `firebaseAuth.service.ts` — verify idToken, sync providers, create user, verification link helpers ✅
+- [x] `firebaseAuth.service.ts` — `createFirebaseEmailUser`, `sendFirebaseEmailVerification`, `assertFirebaseEmailVerified`, `syncFirebasePasswordForUser`
+- [x] `auth.service.ts` — register: Firebase user + Mongo user + bcrypt password in sync
+- [~] `auth.service.ts` — login via `idToken` (primary) or email+password (Mongo bcrypt → Mongo JWT)
+- [x] `auth.service.ts` — `changePassword` / `resetPassword`: Firebase Admin `updateUser` + Mongo bcrypt (dual write via `applyPasswordChange`)
 - [x] `auth.service.ts` — block JWT until `email_verified` from Firebase (email provider)
 - [x] `auth.service.ts` — `verifyEmailWithIdToken`, `resendEmailVerification`; legacy OTP kept for migration
 - [x] `settings.service.ts` — `ensureDefaultSettings` on register (email + Firebase)
@@ -349,7 +355,7 @@ All later API calls
 - [x] `auth.controller.ts` — register/login block unverified email users from receiving Mongo JWT
 - [x] `auth.controller.ts` — `POST /auth/resend-verification` (Firebase email verify resend)
 - [x] `auth.controller.ts` — `POST /auth/verify-email` accepts `{ idToken }` (+ legacy OTP fallback)
-- [ ] `auth.controller.ts` — `changePassword` / forgot / reset aligned with Firebase (Step 1.4)
+- [x] `auth.controller.ts` — `changePassword` / `resetPassword` dual-write Firebase + Mongo (Step 1.4); forgot-password still client/Firebase link flow
 
 ### Routes / APIs
 
@@ -357,7 +363,7 @@ All later API calls
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| POST | `/auth/register` | Public | [~] | `{ idToken }` or `{ email, password, fullName }` → Firebase + Mongo bcrypt |
+| POST | `/auth/register` | Public | [x] | `{ idToken }` or `{ email, password, fullName }` → Firebase + Mongo bcrypt |
 | POST | `/auth/login` | Public | [~] | `{ idToken }` primary; or `{ email, password }` → Mongo verify → Mongo JWT |
 | POST | `/auth/verify-email` | Public | [~] | `{ idToken }` after Firebase email verify — not numeric OTP |
 | POST | `/auth/resend-verification` | Public | [x] | Firebase resend (replaces `/auth/resend-otp`) |
@@ -365,7 +371,7 @@ All later API calls
 | POST | `/auth/logout` | User | [~] | Blacklist Mongo refresh `Token` |
 | POST | `/auth/forgot-password` | Public | [~] | Firebase password reset (client or proxy) |
 | POST | `/auth/reset-password` | Public | [~] | Firebase oobCode flow / client-handled |
-| POST | `/auth/change-password` | User | [~] | Dual: Firebase `updateUser` + Mongo bcrypt |
+| POST | `/auth/change-password` | User | [x] | Dual: Firebase `updateUser` + Mongo bcrypt; revokes all refresh tokens |
 | POST | `/auth/delete-me` | User | [~] | Delete Firebase user + soft-delete Mongo |
 
 ### Validations
@@ -384,6 +390,9 @@ npm run build
 # GET http://localhost:3000/api/v1/activities — 401 without token (route mounted)
 ```
 
+**Flow test:** `npm run test:flow -- 1.1`  
+Script: `scripts/test-flows/step-1.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 #### Step 1.2 — Settings on signup ✅ DONE
 
 **Commit:** `feat(auth): create default Settings on user registration`
@@ -397,6 +406,9 @@ curl -X POST http://localhost:3000/api/v1/auth/register \
   -d '{"email":"test@example.com","password":"Password1","fullName":"Test User"}'
 # Mongo: db.settings.findOne({ userId: <new_user_id> }) → notificationsEnabled: true
 ```
+
+**Flow test:** `npm run test:flow -- 1.2`  
+Script: `scripts/test-flows/step-1.2.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 #### Step 1.3 — Firebase email verification (replaces custom OTP) ✅ DONE
 
@@ -416,12 +428,18 @@ curl -X POST http://localhost:3000/api/v1/auth/resend-verification \
 # → Firebase verification email resent (rate-limited)
 ```
 
-#### Step 1.4 — Mongo bcrypt passwords + Firebase password sync
+**Flow test:** `npm run test:flow -- 1.3`  
+Script: `scripts/test-flows/step-1.3.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
+#### Step 1.4 — Mongo bcrypt passwords + Firebase password sync ✅ DONE
 
 **Commit:** `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password`
 
 **Test:**
 ```bash
+npm run typecheck
+npm test -- tests/integration/auth.test.ts
+
 # Register email user (Firebase + Mongo):
 curl -X POST http://localhost:3000/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -437,9 +455,12 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
 # Change password — both updated:
 curl -X POST http://localhost:3000/api/v1/auth/change-password \
   -H "Authorization: Bearer <access_token>" \
-  -d '{"currentPassword":"Password1","newPassword":"Password2","confirmNewPassword":"Password2"}'
+  -d '{"oldPassword":"Password1","newPassword":"Password2"}'
 # Mongo bcrypt changed; Firebase password updated; old refresh tokens invalidated
 ```
+
+**Flow test:** `npm run test:flow -- 1.4`  
+Script: `scripts/test-flows/step-1.4.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 #### Step 1.5 — Session on login + Mongo tokens
 
@@ -458,6 +479,9 @@ curl -X POST http://localhost:3000/api/v1/auth/refresh-tokens \
 
 # GET /users/me/devices (when built) lists both sessions
 ```
+
+**Flow test:** `npm run test:flow -- 1.5`  
+Script: `scripts/test-flows/step-1.5.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -505,6 +529,9 @@ curl -H "Authorization: Bearer $TOKEN" $BASE/home
 # → 200, { favorites: [...], recentlyUsed: [...] }
 # recentlyUsed sorted by lastTimeUsed desc
 ```
+
+**Flow test:** `npm run test:flow -- 2.4`  
+Script: `scripts/test-flows/step-2.4.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -574,6 +601,9 @@ curl -X POST $BASE/trees/<treeId>/duplicate -H "Authorization: Bearer $TOKEN" \
 curl -X DELETE $BASE/trees/<treeId> -H "Authorization: Bearer $TOKEN"
 # → 200; list no longer shows deleted tree (isDeleted:true in Mongo)
 ```
+
+**Flow test:** `npm run test:flow -- 2.1`  
+Script: `scripts/test-flows/step-2.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -652,6 +682,9 @@ curl -X PATCH $BASE/members/<memberId>/favorite -H "Authorization: Bearer $TOKEN
 # → 200; Mongo: isFavorite:true
 ```
 
+**Flow test:** `npm run test:flow -- 2.2`  
+Script: `scripts/test-flows/step-2.2.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 ---
 
 ## 5. Voice versions
@@ -711,6 +744,9 @@ curl -H "Authorization: Bearer $TOKEN" $BASE/members/$MEMBER
 # → default voice matches selected version
 ```
 
+**Flow test:** `npm run test:flow -- 2.3`  
+Script: `scripts/test-flows/step-2.3.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 ---
 
 ## 6. Chat orchestration (proxy only)
@@ -760,6 +796,9 @@ curl -X POST $BASE/chat -H "Authorization: Bearer $TOKEN" \
 # → 403 or 404 (not your member)
 ```
 
+**Flow test:** `npm run test:flow -- 5.1`  
+Script: `scripts/test-flows/step-5.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 #### Step 5.2 — Credit deduct on chat
 
 **Commit:** `feat(credits): deduct credits atomically on chat`
@@ -772,6 +811,9 @@ curl -X POST $BASE/chat ... -d '{"memberId":"...","message":"test"}'
 curl -H "Authorization: Bearer $TOKEN" $BASE/users/me/credits
 # → creditsRemaining decreased; repeat with balance 0 → 402 or 400 insufficient credits
 ```
+
+**Flow test:** `npm run test:flow -- 5.2`  
+Script: `scripts/test-flows/step-5.2.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -837,6 +879,9 @@ curl -X POST $BASE/subscriptions/price-plans -H "Authorization: Bearer $ADMIN_TO
 # Mongo: CreditTransaction idempotencyKey = invoiceId
 ```
 
+**Flow test:** `npm run test:flow -- 3.1`  
+Script: `scripts/test-flows/step-3.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 #### Step 3.4 — Upgrade / cancel subscription
 
 **Commit:** `feat(subscriptions): add upgrade and cancel for own plan`
@@ -855,6 +900,9 @@ curl -X POST $BASE/subscriptions/upgrade -H "Authorization: Bearer $TOKEN" \
 curl -X PATCH $BASE/subscriptions/<subId>/cancel -H "Authorization: Bearer $TOKEN"
 # → 200; Mongo: status canceled or cancelAtPeriodEnd
 ```
+
+**Flow test:** `npm run test:flow -- 3.4`  
+Script: `scripts/test-flows/step-3.4.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -928,6 +976,9 @@ curl -H "Authorization: Bearer $TOKEN" "$BASE/billing/history?page=1&limit=10"
 # → 200, paginated invoices/payments
 ```
 
+**Flow test:** `npm run test:flow -- 3.3`  
+Script: `scripts/test-flows/step-3.3.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 ---
 
 ## 9. User profile & account settings
@@ -986,6 +1037,9 @@ curl -X POST $BASE/users/me/change-password -H "Authorization: Bearer $TOKEN" \
 # → 200; mismatch confirm → 400
 ```
 
+**Flow test:** `npm run test:flow -- 9`  
+Script: `scripts/test-flows/step-9.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 ---
 
 ## 10. Notification settings
@@ -1028,6 +1082,9 @@ curl -X PATCH $BASE/users/me/settings/notifications -H "Authorization: Bearer $T
   -d '{"birthdayNotificationsEnabled":false}'
 # → 200; Mongo Settings doc updated
 ```
+
+**Flow test:** `npm run test:flow -- 4.2`  
+Script: `scripts/test-flows/step-4.2.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -1075,6 +1132,9 @@ curl -X POST $BASE/users/me/security/2fa/disable -H "Authorization: Bearer $TOKE
 # → 200; twoFactorEnabled:false
 ```
 
+**Flow test:** `npm run test:flow -- 6.1`  
+Script: `scripts/test-flows/step-6.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 #### Step 6.2 — Logout device / all devices
 
 **Commit:** `feat(security): add device list and session revoke`
@@ -1091,6 +1151,9 @@ curl -X DELETE $BASE/users/me/devices/<sessionId> -H "Authorization: Bearer $TOK
 curl -X DELETE $BASE/users/me/devices -H "Authorization: Bearer $TOKEN"
 # → 200; all other sessions revoked
 ```
+
+**Flow test:** `npm run test:flow -- 6.2`  
+Script: `scripts/test-flows/step-6.2.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -1149,6 +1212,9 @@ curl -X POST $BASE/users/<userId>/credits -H "Authorization: Bearer $ADMIN_TOKEN
   -d '{"amount":50,"reason":"promo"}'
 # → 200; balance += 50; ledger entry type adjustment
 ```
+
+**Flow test:** `npm run test:flow -- 3.2`  
+Script: `scripts/test-flows/step-3.2.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -1222,6 +1288,9 @@ curl -X POST $BASE/notifications/<id>/accept -H "Authorization: Bearer $FRIEND_T
 curl -X PATCH $BASE/notifications/<id>/read -H "Authorization: Bearer $FRIEND_TOKEN"
 # → 200; isRead:true
 ```
+
+**Flow test:** `npm run test:flow -- 4.1`  
+Script: `scripts/test-flows/step-4.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -1349,6 +1418,9 @@ curl -X POST $BASE/notifications/crons/run -H "Authorization: Bearer $ADMIN_TOKE
 # → 200, { sent, skipped }
 ```
 
+**Flow test:** `npm run test:flow -- 4.3`  
+Script: `scripts/test-flows/step-4.3.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 #### Step 4.4 — Birthday + anniversary crons
 
 **Commit:** `feat(notifications): add birthday and anniversary cron jobs`
@@ -1365,6 +1437,9 @@ npm run test:notification-crons -- anniversary
 
 # User with birthdayNotificationsEnabled:false → job skips (check logs: skip count)
 ```
+
+**Flow test:** `npm run test:flow -- 4.4`  
+Script: `scripts/test-flows/step-4.4.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 #### Step 4.5 — Payment reminder crons
 
@@ -1383,6 +1458,9 @@ npm run test:notification-crons -- credits-low
 # Subscription status past_due → payment failed notification
 ```
 
+**Flow test:** `npm run test:flow -- 4.5`  
+Script: `scripts/test-flows/step-4.5.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 #### Step 4.6 — Monthly backup-ready cron
 
 **Commit:** `feat(notifications): add monthly backup-ready notification`
@@ -1393,6 +1471,9 @@ npm run test:notification-crons -- backup-ready
 # → type backup, title "Your monthly backup is ready"
 # → NotificationJobLog referenceKey backup:userId:2026-06 (idempotent per month)
 ```
+
+**Flow test:** `npm run test:flow -- 4.6`  
+Script: `scripts/test-flows/step-4.6.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -1455,6 +1536,9 @@ curl -H "Authorization: Bearer $TOKEN" $BASE/archive/recordings/<id>/download
 # → 200, signed URL or redirect
 ```
 
+**Flow test:** `npm run test:flow -- 5.3`  
+Script: `scripts/test-flows/step-5.3.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
+
 ---
 
 ## 15. File / storage layer
@@ -1476,6 +1560,9 @@ curl -H "Authorization: Bearer $TOKEN" $BASE/archive/recordings/<id>/download
 # Mongo: sum of Voice.size + image sizes matches GET /archive/storage usedBytes
 # Exceed plan quota → 413 or 400 storage limit exceeded
 ```
+
+**Flow test:** `npm run test:flow -- 15`  
+Script: `scripts/test-flows/step-15.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -1528,6 +1615,9 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" $BASE/admin/analytics
 # → 200, { userCount, activeSubscriptions, revenueMTD }
 # Non-admin token → 403
 ```
+
+**Flow test:** `npm run test:flow -- 6.3`  
+Script: `scripts/test-flows/step-6.3.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
 ---
 
@@ -1697,7 +1787,7 @@ CREDITS_LOW_THRESHOLD=10
 | Area | Status |
 |------|--------|
 | Firebase auth sync | [~] Partial — target §0.3 (all providers + verification) |
-| Mongo bcrypt passwords | [~] Model exists; dual Firebase sync pending (Step 1.4) |
+| Mongo bcrypt passwords | [x] Dual Firebase sync on register + change-password (`applyPasswordChange`) |
 | JWT / API tokens | [~] Mongo `Token` — Session link pending (Step 1.5) |
 | Stripe checkout + webhooks | [~] Subscription sync only |
 | SubscriptionPlan CRUD | [~] On `/subscriptions/price-plans` + `manageUsers` |
@@ -1715,43 +1805,121 @@ CREDITS_LOW_THRESHOLD=10
 
 ---
 
+## 22. Flow test scripts (chained API flows)
+
+> **Requires:** `npm run dev` (or server on `BASE`), `jq`, optional `mongosh` + `MONGODB_URL` for dev email-verify bypass.  
+> Scripts live in `scripts/test-flows/` and **chain values** from each response (`TOKEN`, `USER_ID`, `TREE_ID`, etc.).
+
+### Run
+
+```bash
+# Single step
+npm run test:flow -- 1.3
+
+# All steps (skips unimplemented endpoints gracefully)
+npm run test:flow
+
+# Core product smoke (auth → trees → members → home)
+npm run test:flow:smoke
+```
+
+### Environment variables
+
+| Variable | Use |
+|----------|-----|
+| `BASE` | API root (default `http://localhost:3000/api/v1`) |
+| `TEST_EMAIL` / `TEST_PASSWORD` | Already-verified user for login chains |
+| `ADMIN_TOKEN` | Admin/dashboard steps (activities admin, plans, credits) |
+| `FIREBASE_ID_TOKEN` | Step 1.3 — after client email verify |
+| `MONGODB_URL` | Dev-only: auto-set `isEmailVerified` without Firebase UI |
+| `VOICE_SAMPLE_FILE` | Step 2.3 — path to `.wav` for upload |
+
+### Response parsing
+
+API uses `config/response.ts` wrapper:
+
+```json
+{ "data": { "attributes": { "user": {} }, "token": { "access": {}, "refresh": {} } } }
+```
+
+`lib.sh` extracts: `.data.token.access.token`, `.data.attributes.user.id`, etc.
+
+### Step → script map
+
+| Step | Script | Chained flow |
+|------|--------|--------------|
+| 0.1 | `step-0.1.sh` | seed relation types → count in Mongo |
+| 0.2 | `step-0.2.sh` | register → login → GET activities → admin activities |
+| 1.1 | `step-1.1.sh` | typecheck → GET /activities 401 |
+| 1.2 | `step-1.2.sh` | register → extract `USER_ID` → assert Settings in Mongo |
+| 1.3 | `step-1.3.sh` | register → login blocked → resend → verify → login → `TOKEN` |
+| 1.4 | `step-1.4.sh` | register → login → change-password → login new password |
+| 1.5 | `step-1.5.sh` | login → refresh-tokens → GET devices |
+| 2.1 | `step-2.1.sh` | login → CRUD tree → duplicate → delete |
+| 2.2 | `step-2.2.sh` | relation types → create tree → create member → favorite |
+| 2.3 | `step-2.3.sh` | member → list voices → upload → set default |
+| 2.4 | `step-2.4.sh` | GET /home favorites + recentlyUsed |
+| 3.1 | `step-3.1.sh` | list plans → admin create plan |
+| 3.2 | `step-3.2.sh` | credits balance → history → admin adjust |
+| 3.3 | `step-3.3.sh` | billing overview → payment methods → history |
+| 3.4 | `step-3.4.sh` | subscriptions/me → upgrade → cancel |
+| 4.1 | `step-4.1.sh` | share tree → inbox → accept/read |
+| 4.2 | `step-4.2.sh` | GET/PATCH notification settings |
+| 4.3–4.6 | `step-4.3.sh` … | notification cron jobs |
+| 5.1 | `step-5.1.sh` | POST /chat → text + audioUrl |
+| 5.2 | `step-5.2.sh` | credits before/after chat |
+| 5.3 | `step-5.3.sh` | archive storage → recordings |
+| 6.1–6.3 | `step-6.1.sh` … | 2FA, devices, admin analytics |
+| 9 | `step-9.sh` | GET/PATCH /users/me |
+| 15 | `step-15.sh` | upload → storage quota |
+
+Unimplemented endpoints return 404/501 → script prints `SKIP` (not a failure).
+
+### Add a script for a new step
+
+1. Copy `scripts/test-flows/step-1.3.sh` as template
+2. `source lib.sh` — use `ensure_verified_user_session`, `api_auth_json`, `extract`
+3. Register in `§22` table + step **Flow test** line in this doc
+
+---
+
 ## 21. Step checklist — Commit & Test (quick reference)
 
-Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords.
+Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. **Prefer flow scripts:** `npm run test:flow -- <step>`.
 
-| Step | Commit | Quick test |
-|------|--------|------------|
+| Step | Commit | Quick test | Flow script |
+|------|--------|------------|-------------|
 | **0.2** ✅ | `feat(activity): centralize audit logging for user, subscription, and admin actions` | `GET /activities` (user); `GET /activities/admin?type=admin_action` (admin) |
-| **0.1** | `chore: add migrations and seed member relation types` | `npm run seed:relation-types` → 13 relation types in Mongo |
+| **0.1** | `chore: add migrations and seed member relation types` | `npm run seed:relation-types` → 13 relation types in Mongo | `npm run test:flow -- 0.1` |
 | **1.1** ✅ | `feat(models): align Eternous schemas and export all models` | `npm run typecheck`; `GET /activities` → 401 without token |
 | **1.2** ✅ | `feat(auth): create default Settings on user registration` | Register user → `db.settings.findOne({ userId })` exists |
 | **1.3** ✅ | `feat(auth): use Firebase email verification instead of custom OTP` | Unverified email → 400; after Firebase verify → login + Mongo JWT |
-| **1.4** | `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password` | bcrypt in Mongo; change-password updates Firebase + Mongo |
-| **1.5** | `feat(auth): track login sessions and link refresh tokens in Mongo` | Login twice → sessions + Token docs; refresh from Mongo |
-| **2.1** | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user |
-| **2.2** | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree |
-| **2.3** | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member |
-| **2.4** | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` |
-| **3.1** | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once |
-| **3.2** | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance |
-| **3.3** | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` |
-| **3.4** | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` |
-| **4.1** | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline |
-| **4.2** | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` |
-| **4.3** | `chore(notifications): register cron scheduler and job dedup log` | Server start logs schedulers; dedup on second run |
-| **4.4** | `feat(notifications): add birthday and anniversary cron jobs` | `test:notification-crons birthday` → notification |
-| **4.5** | `feat(notifications): add payment and credits-low cron jobs` | Renewal + credits-low crons fire expected types |
-| **4.6** | `feat(notifications): add monthly backup-ready notification` | `test:notification-crons backup-ready` |
-| **5.1** | `feat(chat): add ephemeral chat proxy with voice selection` | `POST /chat` → text + audioUrl; no chat DB docs |
-| **5.2** | `feat(credits): deduct credits atomically on chat` | Balance drops; 0 credits → error |
-| **5.3** | `feat(archive): add storage usage, recordings list, and download` | `GET /archive/storage`, `/recordings`, download URL |
-| **6.1** | `feat(security): add two-factor authentication endpoints` | Enable → verify → disable 2FA |
-| **6.2** | `feat(security): add device list and session revoke` | List devices; revoke one / all |
-| **6.3** | `feat(admin): add optional dashboard analytics endpoint` | Admin analytics → 200; user → 403 |
-| **9** | `feat(users): extend profile endpoint with credits and subscription` | `GET /users/me` includes credits + plan |
+| **1.4** ✅ | `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password` | bcrypt in Mongo; change-password updates Firebase + Mongo; refresh tokens revoked | `npm run test:flow -- 1.4` |
+| **1.5** | `feat(auth): track login sessions and link refresh tokens in Mongo` | Login twice → sessions + Token docs; refresh from Mongo | `npm run test:flow -- 1.5` |
+| **2.1** | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user | `npm run test:flow -- 2.1` |
+| **2.2** | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree | `npm run test:flow -- 2.2` |
+| **2.3** | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member | `npm run test:flow -- 2.3` |
+| **2.4** | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` | `npm run test:flow -- 2.4` |
+| **3.1** | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once | `npm run test:flow -- 3.1` |
+| **3.2** | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
+| **3.3** | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
+| **3.4** | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
+| **4.1** | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline | `npm run test:flow -- 4.1` |
+| **4.2** | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` | `npm run test:flow -- 4.2` |
+| **4.3** | `chore(notifications): register cron scheduler and job dedup log` | Server start logs schedulers; dedup on second run | `npm run test:flow -- 4.3` |
+| **4.4** | `feat(notifications): add birthday and anniversary cron jobs` | `test:notification-crons birthday` → notification | `npm run test:flow -- 4.4` |
+| **4.5** | `feat(notifications): add payment and credits-low cron jobs` | Renewal + credits-low crons fire expected types | `npm run test:flow -- 4.5` |
+| **4.6** | `feat(notifications): add monthly backup-ready notification` | `test:notification-crons backup-ready` | `npm run test:flow -- 4.6` |
+| **5.1** | `feat(chat): add ephemeral chat proxy with voice selection` | `POST /chat` → text + audioUrl; no chat DB docs | `npm run test:flow -- 5.1` |
+| **5.2** | `feat(credits): deduct credits atomically on chat` | Balance drops; 0 credits → error | `npm run test:flow -- 5.2` |
+| **5.3** | `feat(archive): add storage usage, recordings list, and download` | `GET /archive/storage`, `/recordings`, download URL | `npm run test:flow -- 5.3` |
+| **6.1** | `feat(security): add two-factor authentication endpoints` | Enable → verify → disable 2FA | `npm run test:flow -- 6.1` |
+| **6.2** | `feat(security): add device list and session revoke` | List devices; revoke one / all | `npm run test:flow -- 6.2` |
+| **6.3** | `feat(admin): add optional dashboard analytics endpoint` | Admin analytics → 200; user → 403 | `npm run test:flow -- 6.3` |
+| **9** | `feat(users): extend profile endpoint with credits and subscription` | `GET /users/me` includes credits + plan | `npm run test:flow -- 9` |
 
 **Always before commit:** `npm run typecheck` (and `npm run test` when tests exist for that step).
 
 ---
 
-*Last updated: 2026-06-19 — §0.3: Firebase identity + Mongo passwords/tokens; §21: Commit & Test on every step.*
+*Last updated: 2026-06-19 — §22: flow test scripts; §0.3: Firebase identity + Mongo passwords/tokens.*

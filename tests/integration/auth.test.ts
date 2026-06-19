@@ -185,4 +185,50 @@ describe('Auth routes', () => {
       });
     });
   });
+
+  describe('POST /api/v1/auth/change-password', () => {
+    test('should change password, revoke old refresh token, and allow login with new password', async () => {
+      const credentials = {
+        fullName: 'Test User',
+        email: 'change@example.com',
+        password: 'Password123!',
+        isEmailVerified: true,
+      };
+
+      await User.create(credentials);
+
+      const loginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: credentials.email, password: credentials.password })
+        .expect(httpStatus.OK);
+
+      const loginPayload = getAuthPayload(loginRes.body);
+      const accessToken = (loginPayload.tokens as { access: { token: string } }).access.token;
+      const refreshToken = (loginPayload.tokens as { refresh: { token: string } }).refresh.token;
+
+      await request(app)
+        .post('/api/v1/auth/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ oldPassword: credentials.password, newPassword: 'NewPassword123!' })
+        .expect(httpStatus.OK);
+
+      const dbUser = await User.findOne({ email: credentials.email });
+      expect(dbUser).not.toBeNull();
+      if (!dbUser) {
+        throw new Error('Expected user to exist');
+      }
+      expect(await dbUser.isPasswordMatch('NewPassword123!')).toBe(true);
+      expect(dbUser.password).not.toBe(credentials.password);
+
+      await request(app)
+        .post('/api/v1/auth/refresh-tokens')
+        .send({ refreshToken })
+        .expect(httpStatus.UNAUTHORIZED);
+
+      await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: credentials.email, password: 'NewPassword123!' })
+        .expect(httpStatus.OK);
+    });
+  });
 });

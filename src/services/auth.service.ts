@@ -12,9 +12,25 @@ import {
   assertFirebaseEmailVerified,
   isFirebaseConfigured,
   sendFirebaseEmailVerification,
+  syncFirebasePasswordForUser,
   syncFirebaseUser,
   verifyIdToken,
 } from './firebaseAuth.service.ts';
+
+const applyPasswordChange = async (user: UserDocument, newPassword: string): Promise<UserDocument> => {
+  if (await user.isPasswordMatch(newPassword)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'New password cannot be the same as old password');
+  }
+
+  if (isFirebaseConfigured()) {
+    await syncFirebasePasswordForUser(user, newPassword, user.fullName);
+  }
+
+  user.password = newPassword;
+  await user.save();
+  await tokenService.revokeAllUserRefreshTokens(user.id);
+  return user;
+};
 
 const loginUserWithEmailAndPassword = async (email: string, password: string): Promise<UserDocument> => {
   const user = await userService.getUserByEmail(email);
@@ -57,12 +73,7 @@ const resetPassword = async (newPassword: string, email: string): Promise<UserDo
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-  if (await user.isPasswordMatch(newPassword)) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'New password cannot be the same as old password');
-  }
-  await userService.updateUserById(user.id, { password: newPassword });
-
-  return user;
+  return applyPasswordChange(user, newPassword);
 };
 
 const changePassword = async (reqUser: UserDocument, reqBody: ChangePasswordBody): Promise<UserDocument> => {
@@ -74,12 +85,7 @@ const changePassword = async (reqUser: UserDocument, reqBody: ChangePasswordBody
   if (!(await user.isPasswordMatch(oldPassword))) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Incorrect password');
   }
-  if (await user.isPasswordMatch(newPassword)) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'New password cannot be the same as old password');
-  }
-  user.password = newPassword;
-  await user.save();
-  return user;
+  return applyPasswordChange(user, newPassword);
 };
 
 const verifyEmailWithIdToken = async (idToken: string): Promise<UserDocument> => {

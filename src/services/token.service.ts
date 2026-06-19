@@ -113,6 +113,10 @@ const revokeRefreshToken = async (refreshToken: string): Promise<TokenDocument> 
   return tokenDoc;
 };
 
+const revokeAllUserRefreshTokens = async (userId: ObjectIdLike): Promise<void> => {
+  await Token.deleteMany({ user: userId, type: tokenTypes.REFRESH, blacklisted: false });
+};
+
 const refreshAuth = async (
   refreshToken: string,
   activityId?: ObjectIdLike,
@@ -141,6 +145,7 @@ export default {
   generateResetPasswordToken,
   generateVerifyEmailToken,
   revokeRefreshToken,
+  revokeAllUserRefreshTokens,
   refreshAuth,
 };
 
@@ -152,5 +157,6 @@ export {
   generateResetPasswordToken,
   generateVerifyEmailToken,
   revokeRefreshToken,
+  revokeAllUserRefreshTokens,
   refreshAuth,
 };

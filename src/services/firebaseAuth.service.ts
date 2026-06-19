@@ -105,6 +105,44 @@ const assertFirebaseEmailVerified = (decoded: DecodedIdToken): void => {
   }
 };
 
+const updateFirebasePassword = async (uid: string, password: string): Promise<void> => {
+  await getFirebaseAuth().updateUser(uid, { password });
+};
+
+const syncFirebasePasswordForUser = async (
+  user: UserDocument,
+  password: string,
+  displayName?: string
+): Promise<UserDocument> => {
+  if (!isFirebaseConfigured()) {
+    return user;
+  }
+
+  if (user.firebaseUid) {
+    await updateFirebasePassword(user.firebaseUid, password);
+    return user;
+  }
+
+  const firebaseUser = await getFirebaseUserByEmail(user.email);
+  if (firebaseUser) {
+    await updateFirebasePassword(firebaseUser.uid, password);
+    user.firebaseUid = firebaseUser.uid;
+    await user.save();
+    return user;
+  }
+
+  const created = await createFirebaseEmailUser({
+    email: user.email,
+    password,
+    displayName: displayName ?? user.fullName,
+    emailVerified: user.isEmailVerified ?? false,
+  });
+  user.firebaseUid = created.uid;
+  user.authProvider = user.authProvider ?? 'email';
+  await user.save();
+  return user;
+};
+
 const verifyIdToken = async (idToken: string): Promise<DecodedIdToken> => {
   const app = getFirebaseApp();
   return app.auth().verifyIdToken(idToken);
@@ -216,6 +254,8 @@ export {
   isFirebaseConfigured,
   getFirebaseUserByEmail,
   createFirebaseEmailUser,
+  updateFirebasePassword,
+  syncFirebasePasswordForUser,
   generateEmailVerificationLink,
   sendFirebaseEmailVerification,
   assertFirebaseEmailVerified,
