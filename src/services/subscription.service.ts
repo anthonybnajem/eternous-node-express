@@ -1,8 +1,13 @@
 import type Stripe from 'stripe';
 import httpStatus from 'http-status';
 import type { Types } from 'mongoose';
+import config from '../config/config.ts';
 import { Subscription, User } from '../models/index.ts';
 import activityService from './activity.service.ts';
+import subscriptionPlanService from './subscriptionPlan.service.ts';
+import stripeSubscriptionService from './payments/stripeSubscription.service.ts';
+import * as stripeService from './payments/stripe.service.ts';
+import type { SubscriptionPlanDocument } from '../models/subscriptionPlan.model.ts';
 import type { SubscriptionDocument, SubscriptionProvider, SubscriptionStatus } from '../models/subscription.model.ts';
 import ApiError from '../utils/ApiError.ts';
 import type { ObjectIdLike } from '../types/common.ts';
@@ -10,6 +15,7 @@ import type { ObjectIdLike } from '../types/common.ts';
 export interface CreateSubscriptionBody {
   user: ObjectIdLike;
   name: string;
+  plan?: ObjectIdLike | null;
   provider?: SubscriptionProvider;
   status?: SubscriptionStatus;
   startedAt?: Date;
@@ -18,11 +24,13 @@ export interface CreateSubscriptionBody {
   canceledAt?: Date | null;
   externalCustomerId?: string;
   externalSubscriptionId?: string;
+  externalPriceId?: string;
   metadata?: Record<string, unknown>;
 }
 
 export interface UpdateSubscriptionBody {
   name?: string;
+  plan?: ObjectIdLike | null;
   provider?: SubscriptionProvider;
   status?: SubscriptionStatus;
   startedAt?: Date;
@@ -31,7 +39,23 @@ export interface UpdateSubscriptionBody {
   canceledAt?: Date | null;
   externalCustomerId?: string;
   externalSubscriptionId?: string;
+  externalPriceId?: string;
   metadata?: Record<string, unknown>;
+}
+
+export interface UpgradeSubscriptionInput {
+  userId: ObjectIdLike;
+  planId: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  customerEmail?: string;
+  customerName?: string;
+}
+
+export interface UpgradeSubscriptionResult {
+  mode: 'upgraded' | 'checkout';
+  subscription?: SubscriptionDocument;
+  checkoutSession?: { sessionId: string; url: string | null };
 }
 
 const syncUserSubscriptionPointers = async (userId: ObjectIdLike, subscriptionId: ObjectIdLike | null): Promise<void> => {
@@ -92,10 +116,15 @@ const syncSubscriptionFromStripe = async (
     return null;
   }
 
+  const priceId = stripeSubscription.items.data[0]?.price?.id;
+  const matchedPlan = priceId ? await subscriptionPlanService.getSubscriptionPlanByPriceId(priceId) : null;
+
   const subscriptionData = {
-    name: resolveStripeSubscriptionName(stripeSubscription),
+    name: matchedPlan?.name ?? resolveStripeSubscriptionName(stripeSubscription),
     provider: 'stripe' as SubscriptionProvider,
     status: mapStripeStatus(stripeSubscription.status),
+    plan: matchedPlan?._id ?? null,
+    externalPriceId: priceId,
     startedAt: stripeSubscription.start_date ? new Date(stripeSubscription.start_date * 1000) : undefined,
     endsAt:
       typeof stripeSubscription.current_period_end === 'number'
@@ -209,12 +238,101 @@ const listSubscriptionsByUser = async (userId: ObjectIdLike): Promise<Subscripti
 };
 
 const getCurrentSubscription = async (userId: ObjectIdLike): Promise<SubscriptionDocument | null> => {
-  const user = await User.findById(userId).populate('currentSubscription');
+  const user = await User.findById(userId).populate({
+    path: 'currentSubscription',
+    populate: { path: 'plan' },
+  });
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
   return (user.currentSubscription as SubscriptionDocument | null) ?? null;
+};
+
+const resolveBillingRedirectUrls = (successUrl?: string, cancelUrl?: string) => {
+  const base = config.clientUrl || 'http://localhost:3000';
+  return {
+    successUrl: successUrl ?? `${base}/billing/success`,
+    cancelUrl: cancelUrl ?? `${base}/billing/cancel`,
+  };
+};
+
+const applyPlanToSubscription = async (
+  subscription: SubscriptionDocument,
+  plan: SubscriptionPlanDocument
+): Promise<SubscriptionDocument> => {
+  subscription.plan = plan._id as Types.ObjectId;
+  subscription.externalPriceId = plan.priceId;
+  subscription.name = plan.name;
+  await subscription.save();
+  return subscription;
+};
+
+const upgradeUserSubscription = async (input: UpgradeSubscriptionInput): Promise<UpgradeSubscriptionResult> => {
+  const plan = await subscriptionPlanService.getSubscriptionPlanById(input.planId);
+  if (!plan) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Subscription plan not found');
+  }
+  if (!plan.active) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Subscription plan is inactive');
+  }
+
+  const current = await getCurrentSubscription(input.userId);
+
+  if (
+    current?.externalSubscriptionId &&
+    stripeSubscriptionService.isStripeSubscriptionId(current.externalSubscriptionId)
+  ) {
+    const stripeSubscription = await stripeSubscriptionService.upgradeSubscription(
+      current.externalSubscriptionId,
+      plan.priceId
+    );
+    await syncSubscriptionFromStripe(stripeSubscription, String(input.userId));
+    const refreshed = await getSubscriptionById(current.id);
+    if (refreshed) {
+      const upgraded = await applyPlanToSubscription(refreshed, plan);
+      return { mode: 'upgraded', subscription: upgraded };
+    }
+  }
+
+  if (!config.stripe.secretKey) {
+    if (current) {
+      current.status = 'active';
+      current.canceledAt = null;
+      const upgraded = await applyPlanToSubscription(current, plan);
+      await syncUserSubscriptionPointers(input.userId, upgraded.id);
+      return { mode: 'upgraded', subscription: upgraded };
+    }
+
+    const created = await createSubscription({
+      user: input.userId,
+      name: plan.name,
+      plan: plan._id,
+      externalPriceId: plan.priceId,
+      status: 'active',
+      provider: 'manual',
+    });
+    return { mode: 'upgraded', subscription: created };
+  }
+
+  const { successUrl, cancelUrl } = resolveBillingRedirectUrls(input.successUrl, input.cancelUrl);
+  const checkoutSession = await stripeService.createSubscriptionCheckoutSession({
+    priceId: plan.priceId,
+    successUrl,
+    cancelUrl,
+    customerEmail: input.customerEmail,
+    customerName: input.customerName,
+    userId: String(input.userId),
+    name: plan.name,
+    metadata: {
+      planId: String(plan._id),
+      planSlug: plan.slug,
+      planName: plan.name,
+      planPriceId: plan.priceId,
+    },
+  });
+
+  return { mode: 'checkout', checkoutSession };
 };
 
 const updateSubscriptionById = async (
@@ -245,23 +363,55 @@ const cancelSubscription = async (
   subscriptionId: ObjectIdLike,
   endsAt: Date | null = null
 ): Promise<SubscriptionDocument> => {
-  const subscription = await updateSubscriptionById(subscriptionId, {
+  const subscription = await Subscription.findById(subscriptionId);
+  if (!subscription) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Subscription not found');
+  }
+
+  if (
+    subscription.externalSubscriptionId &&
+    stripeSubscriptionService.isStripeSubscriptionId(subscription.externalSubscriptionId)
+  ) {
+    const stripeSubscription = await stripeSubscriptionService.cancelSubscriptionAtPeriodEnd(
+      subscription.externalSubscriptionId
+    );
+
+    subscription.status = mapStripeStatus(stripeSubscription.status);
+    subscription.endsAt =
+      typeof stripeSubscription.current_period_end === 'number'
+        ? new Date(stripeSubscription.current_period_end * 1000)
+        : endsAt;
+    subscription.metadata = {
+      ...(subscription.metadata ?? {}),
+      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+      stripeStatus: stripeSubscription.status,
+      currentPeriodEnd: stripeSubscription.current_period_end,
+    };
+    await subscription.save();
+    return subscription;
+  }
+
+  const updatedSubscription = await updateSubscriptionById(subscriptionId, {
     status: 'canceled',
     canceledAt: new Date(),
     endsAt,
+    metadata: {
+      ...(subscription.metadata ?? {}),
+      cancelAtPeriodEnd: false,
+    },
   });
 
-  const user = await User.findById(subscription.user);
+  const user = await User.findById(updatedSubscription.user);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  if (user.currentSubscription && String(user.currentSubscription) === String(subscription.id)) {
+  if (user.currentSubscription && String(user.currentSubscription) === String(updatedSubscription.id)) {
     user.currentSubscription = null;
     await user.save();
   }
 
-  return subscription;
+  return updatedSubscription;
 };
 
 export default {
@@ -273,6 +423,7 @@ export default {
   updateSubscriptionById,
   activateSubscription,
   cancelSubscription,
+  upgradeUserSubscription,
   syncUserSubscriptionPointers,
   syncSubscriptionFromStripe,
 };
@@ -286,6 +437,7 @@ export {
   updateSubscriptionById,
   activateSubscription,
   cancelSubscription,
+  upgradeUserSubscription,
   syncUserSubscriptionPointers,
   syncSubscriptionFromStripe,
 };

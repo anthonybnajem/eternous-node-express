@@ -51,11 +51,24 @@ const cancelSubscription = {
     .unknown(false),
 };
 
+const upgradeSubscription = {
+  body: Joi.object()
+    .keys({
+      planId: Joi.string().required(),
+      successUrl: Joi.string().uri().optional(),
+      cancelUrl: Joi.string().uri().optional(),
+      customerEmail: Joi.string().email().optional(),
+      customerName: Joi.string().allow('').optional(),
+    })
+    .unknown(false),
+};
+
 export default {
   createSubscription,
   createCheckoutSession,
   subscriptionIdParams,
   cancelSubscription,
+  upgradeSubscription,
 };
 
-export { createSubscription, createCheckoutSession, subscriptionIdParams, cancelSubscription };
+export { createSubscription, createCheckoutSession, subscriptionIdParams, cancelSubscription, upgradeSubscription };

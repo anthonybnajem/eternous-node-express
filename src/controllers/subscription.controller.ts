@@ -36,6 +36,13 @@ type CreateCheckoutSessionBody = {
 type CancelSubscriptionBody = {
   endsAt?: string | Date | null;
 };
+type UpgradeSubscriptionBody = {
+  planId: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  customerEmail?: string;
+  customerName?: string;
+};
 
 const requireAuthUser = (req: Request) => {
   if (!req.user) {
@@ -48,13 +55,14 @@ const getCurrentSubscription = catchAsync(async (req: Request, res: Response): P
   const user = requireAuthUser(req);
   const currentSubscription = await subscriptionService.getCurrentSubscription(user.id);
   const subscriptions = await subscriptionService.listSubscriptionsByUser(user.id);
+  const plans = await subscriptionPlanService.listSubscriptionPlans(true);
 
   res.status(httpStatus.OK).json(
     response({
       message: 'Subscription retrieved successfully',
       status: 'OK',
       statusCode: httpStatus.OK,
-      data: { currentSubscription, subscriptions },
+      data: { currentSubscription, subscriptions, plans },
     })
   );
 });
@@ -193,6 +201,45 @@ const createCheckoutSession = catchAsync<EmptyParams, unknown, CreateCheckoutSes
   }
 );
 
+const upgradeSubscription = catchAsync<EmptyParams, unknown, UpgradeSubscriptionBody, EmptyQuery>(
+  async (req, res: Response): Promise<void> => {
+    const user = requireAuthUser(req);
+    const result = await subscriptionService.upgradeUserSubscription({
+      userId: user.id,
+      planId: req.body.planId,
+      successUrl: req.body.successUrl,
+      cancelUrl: req.body.cancelUrl,
+      customerEmail: req.body.customerEmail ?? user.email,
+      customerName: req.body.customerName ?? user.fullName,
+    });
+
+    await activityService.recordSubscriptionActivity(
+      user.id,
+      'subscription_updated',
+      `${user.email} requested subscription upgrade`,
+      {
+        planId: req.body.planId,
+        mode: result.mode,
+        subscriptionId: result.subscription?.id,
+        checkoutSessionId: result.checkoutSession?.sessionId,
+      },
+      req
+    );
+
+    res.status(httpStatus.OK).json(
+      response({
+        message:
+          result.mode === 'checkout'
+            ? 'Checkout session created successfully'
+            : 'Subscription upgraded successfully',
+        status: 'OK',
+        statusCode: httpStatus.OK,
+        data: result,
+      })
+    );
+  }
+);
+
 const cancelSubscription = catchAsync<SubscriptionIdParams, unknown, CancelSubscriptionBody, EmptyQuery>(
   async (req, res: Response): Promise<void> => {
     const user = requireAuthUser(req);
@@ -278,6 +325,7 @@ export default {
   getSubscription,
   createSubscription,
   createCheckoutSession,
+  upgradeSubscription,
   cancelSubscription,
   activateSubscription,
 };
@@ -287,6 +335,7 @@ export {
   getSubscription,
   createSubscription,
   createCheckoutSession,
+  upgradeSubscription,
   cancelSubscription,
   activateSubscription,
 };

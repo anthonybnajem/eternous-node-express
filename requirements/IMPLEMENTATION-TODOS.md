@@ -857,9 +857,9 @@ Script: `scripts/test-flows/step-5.2.sh` — chains API calls; passes `TOKEN`, i
 |--------|------|--------|--------|-------|
 | GET | `/subscriptions/price-plans` | Public | [x] | Active plans with `credits`, `planType` |
 | POST | `/subscriptions/checkout-session` | User | [~] | Stripe checkout |
-| GET | `/subscriptions/me` | User | [~] | Current plan + history |
-| PATCH | `/subscriptions/:id/cancel` | User | [~] | Cancel own plan |
-| POST | `/subscriptions/upgrade` | User | [ ] | Upgrade own plan |
+| GET | `/subscriptions/me` | User | [x] | Current plan + history |
+| PATCH | `/subscriptions/:id/cancel` | User | [x] | Cancel own plan |
+| POST | `/subscriptions/upgrade` | User | [x] | Upgrade own plan |
 
 **Dashboard** (existing paths + guards):
 
@@ -895,7 +895,7 @@ curl -X POST $BASE/subscriptions/price-plans -H "Authorization: Bearer $ADMIN_TO
 **Flow test:** `npm run test:flow -- 3.1`  
 Script: `scripts/test-flows/step-3.1.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
-#### Step 3.4 — Upgrade / cancel subscription
+#### Step 3.4 — Upgrade / cancel subscription ✅ DONE
 
 **Commit:** `feat(subscriptions): add upgrade and cancel for own plan`
 
@@ -1917,7 +1917,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **3.1** ✅ | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once | `npm run test:flow -- 3.1` |
 | **3.2** ✅ | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
 | **3.3** ✅ | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
-| **3.4** | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
+| **3.4** ✅ | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
 | **4.1** | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline | `npm run test:flow -- 4.1` |
 | **4.2** | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` | `npm run test:flow -- 4.2` |
 | **4.3** | `chore(notifications): register cron scheduler and job dedup log` | Server start logs schedulers; dedup on second run | `npm run test:flow -- 4.3` |

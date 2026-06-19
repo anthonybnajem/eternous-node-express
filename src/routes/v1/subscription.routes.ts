@@ -105,6 +105,25 @@ router.post(
 
 /**
  * @swagger
+ * /subscriptions/upgrade:
+ *   post:
+ *     summary: Upgrade the current user's subscription plan
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: OK
+ */
+router.post(
+  '/upgrade',
+  auth(),
+  validate(subscriptionValidation.upgradeSubscription),
+  subscriptionController.upgradeSubscription
+);
+
+/**
+ * @swagger
  * /subscriptions/{subscriptionId}:
  *   get:
  *     summary: Get a subscription
