@@ -16,4 +16,6 @@ export { default as voiceService } from './voice.service.ts';
 export { default as homeService } from './home.service.ts';
 export { default as creditService } from './credit.service.ts';
 export { default as billingService } from './billing.service.ts';
+export { default as notificationService } from './notification.service.ts';
+export { default as treeShareService } from './treeShare.service.ts';
 export { default as sessionService } from './session.service.ts';

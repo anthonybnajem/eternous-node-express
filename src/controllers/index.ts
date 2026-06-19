@@ -7,3 +7,4 @@ export * as privacyController from './privacy.controller.ts';
 export * as aboutController from './about.controller.ts';
 export * as creditController from './credit.controller.ts';
 export * as billingController from './billing.controller.ts';
+export * as notificationInboxController from './notificationInbox.controller.ts';

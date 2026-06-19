@@ -33,6 +33,10 @@ router
   .post(auth(), treeImageFields, validate(treeValidation.createTree), treeController.createTree);
 
 router
+  .route('/:treeId/share')
+  .post(auth(), validate(treeValidation.shareTree), treeController.shareTree);
+
+router
   .route('/:treeId/default')
   .patch(auth(), validate(treeValidation.setDefaultTree), treeController.setDefaultTree);
 

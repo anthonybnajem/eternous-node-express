@@ -1236,17 +1236,17 @@ Script: `scripts/test-flows/step-3.2.sh` — chains API calls; passes `TOKEN`, i
 > Tree share invites, backup ready, anniversary, birthday. Accept/decline for shares.
 
 ### DB
-- [ ] `Notification`: extend `type` enum: `tree_share`, `backup`, `anniversary`, `birthday`, `billing`, `subscription`, `system`
-- [ ] `Notification`: add `title`, `actionStatus` (pending | accepted | declined), `payload` (metadata)
-- [ ] `TreeShare` collection (new): `treeId`, `ownerId`, `recipientId`, `status`, `message`
+- [x] `Notification`: extend `type` enum: `tree_share`, `backup`, `anniversary`, `birthday`, `billing`, `subscription`, `system`
+- [x] `Notification`: add `title`, `actionStatus` (pending | accepted | declined), `payload` (metadata)
+- [x] `TreeShare` collection (new): `treeId`, `ownerId`, `recipientId`, `status`, `message`
 
 ### Models
-- [~] `notification.model.ts` — extend types
-- [ ] `treeShare.model.ts` — new
+- [x] `notification.model.ts` — extend types
+- [x] `treeShare.model.ts` — new
 
 ### Services
-- [ ] `notification.service.ts` — create, list (paginated), mark read, accept/decline share
-- [ ] `treeShare.service.ts` — share tree with user email → notification
+- [x] `notification.service.ts` — create, list (paginated), mark read, accept/decline share
+- [x] `treeShare.service.ts` — share tree with user email → notification
 - [ ] Event: backup completed → notification (see §13.1 backup cron)
 - [ ] **Cron jobs** — see **§13.1** (birthdays, payments, anniversaries, subscription reminders)
 
@@ -1256,11 +1256,11 @@ Script: `scripts/test-flows/step-3.2.sh` — chains API calls; passes `TOKEN`, i
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| GET | `/notifications` | User | [ ] | Paginated inbox (own) |
-| PATCH | `/notifications/:id/read` | User | [ ] | Mark read |
-| POST | `/notifications/:id/accept` | User | [ ] | Accept tree share |
-| POST | `/notifications/:id/decline` | User | [ ] | Decline tree share |
-| POST | `/trees/:treeId/share` | User | [ ] | Share own tree with email |
+| GET | `/notifications` | User | [x] | Paginated inbox (own) |
+| PATCH | `/notifications/:id/read` | User | [x] | Mark read |
+| POST | `/notifications/:id/accept` | User | [x] | Accept tree share |
+| POST | `/notifications/:id/decline` | User | [x] | Decline tree share |
+| POST | `/trees/:treeId/share` | User | [x] | Share own tree with email |
 | POST | `/notifications/topic/subscribe` | User | [~] | FCM topic |
 | POST | `/notifications/topic/unsubscribe` | User | [~] | FCM topic |
 
@@ -1280,7 +1280,7 @@ Script: `scripts/test-flows/step-3.2.sh` — chains API calls; passes `TOKEN`, i
 - It’s been 1 year since “Grandma” was added
 - Today is Ralph’s birthday 🎉
 
-#### Step 4.1 — Notification inbox + tree share
+#### Step 4.1 — Notification inbox + tree share ✅ DONE
 
 **Commit:** `feat(notifications): add inbox and tree share accept/decline`
 
@@ -1701,7 +1701,7 @@ Phase 6 — Security & polish
 - [ ] `twoFactor.service.ts`
 - [ ] `credit.service.ts`
 - [ ] `billing.service.ts`
-- [ ] `notification.service.ts` (inbox CRUD)
+- [x] `notification.service.ts` (inbox CRUD)
 - [ ] `notificationDispatch.service.ts` — cron + webhook dispatch (§13.1)
 - [ ] `services/notifications/jobs/birthdayNotification.job.ts`
 - [ ] `services/notifications/jobs/anniversaryNotification.job.ts`
@@ -1720,7 +1720,7 @@ Phase 6 — Security & polish
 - [ ] `settings.controller.ts` — User
 - [ ] `session.controller.ts` — User
 - [ ] `billing.controller.ts` — User
-- [ ] `notificationInbox.controller.ts` — User (inbox)
+- [x] `notificationInbox.controller.ts` — User (inbox)
 - [ ] `archive.controller.ts` — User
 - [x] `home.controller.ts` — User
 - [ ] Extend existing controllers for dashboard (§16) — no `controllers/admin/` folder
@@ -1918,7 +1918,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **3.2** ✅ | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
 | **3.3** ✅ | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
 | **3.4** ✅ | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
-| **4.1** | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline | `npm run test:flow -- 4.1` |
+| **4.1** ✅ | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline | `npm run test:flow -- 4.1` |
 | **4.2** | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` | `npm run test:flow -- 4.2` |
 | **4.3** | `chore(notifications): register cron scheduler and job dedup log` | Server start logs schedulers; dedup on second run | `npm run test:flow -- 4.3` |
 | **4.4** | `feat(notifications): add birthday and anniversary cron jobs` | `test:notification-crons birthday` → notification | `npm run test:flow -- 4.4` |

@@ -4,13 +4,14 @@ import catchAsync from '../utils/catchAsync.ts';
 import response from '../config/response.ts';
 import ApiError from '../utils/ApiError.ts';
 import pick from '../utils/pick.ts';
-import { activityService, treeService } from '../services/index.ts';
+import { activityService, treeService, treeShareService } from '../services/index.ts';
 import { applyTreeUploads } from '../utils/treeUpload.ts';
 import type { TreeCreateBody, TreeUpdateBody } from '../services/tree.service.ts';
 
 type TreeIdParams = { treeId: string };
 type TreeQuery = Record<string, string | undefined>;
 type DuplicateTreeBody = { copyMembers?: boolean };
+type ShareTreeBody = { email: string; message?: string };
 type EmptyParams = Record<string, never>;
 type EmptyQuery = Record<string, never>;
 
@@ -137,6 +138,33 @@ const duplicateTree = catchAsync<TreeIdParams, unknown, DuplicateTreeBody, Empty
   );
 });
 
+const shareTree = catchAsync<TreeIdParams, unknown, ShareTreeBody, EmptyQuery>(async (req, res: Response): Promise<void> => {
+  const user = requireAuthUser(req);
+  const result = await treeShareService.shareTree({
+    treeId: req.params.treeId,
+    ownerId: user.id,
+    email: req.body.email,
+    message: req.body.message,
+  });
+
+  await activityService.recordUserProductAction(req, 'notification', `Shared tree with ${req.body.email}`, {
+    action: 'share_tree',
+    treeId: req.params.treeId,
+    recipientEmail: req.body.email,
+    treeShareId: result.treeShare.id,
+    notificationId: result.notification.id,
+  });
+
+  res.status(httpStatus.CREATED).json(
+    response({
+      message: 'Tree shared successfully',
+      status: 'OK',
+      statusCode: httpStatus.CREATED,
+      data: result,
+    })
+  );
+});
+
 const setDefaultTree = catchAsync<TreeIdParams, unknown, unknown, EmptyQuery>(async (req, res: Response): Promise<void> => {
   const user = requireAuthUser(req);
   const tree = await treeService.setDefaultTree(req.params.treeId, user.id);
@@ -163,5 +191,6 @@ export default {
   updateTree,
   deleteTree,
   duplicateTree,
+  shareTree,
   setDefaultTree,
 };

@@ -1,6 +1,9 @@
 import express from 'express';
 import * as notificationController from '../../controllers/notification.controller.ts';
+import { notificationInboxController } from '../../controllers/index.ts';
 import auth from '../../middlewares/auth.ts';
+import validate from '../../middlewares/validate.ts';
+import { notificationValidation } from '../../validations/index.ts';
 
 const router = express.Router();
 
@@ -10,6 +13,22 @@ const router = express.Router();
  *   name: Notifications
  *   description: Email and push notifications
  */
+
+router
+  .route('/')
+  .get(auth(), validate(notificationValidation.listNotifications), notificationInboxController.listNotifications);
+
+router
+  .route('/:id/read')
+  .patch(auth(), validate(notificationValidation.notificationIdParams), notificationInboxController.markNotificationRead);
+
+router
+  .route('/:id/accept')
+  .post(auth(), validate(notificationValidation.notificationIdParams), notificationInboxController.acceptNotification);
+
+router
+  .route('/:id/decline')
+  .post(auth(), validate(notificationValidation.notificationIdParams), notificationInboxController.declineNotification);
 
 /**
  * @swagger

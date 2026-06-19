@@ -48,6 +48,14 @@ const setDefaultTree = {
   body: Joi.object().optional(),
 };
 
+const shareTree = {
+  ...treeIdParams,
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    message: Joi.string().trim().allow('').max(500),
+  }),
+};
+
 export default {
   listTrees,
   createTree,
@@ -56,6 +64,7 @@ export default {
   deleteTree,
   duplicateTree,
   setDefaultTree,
+  shareTree,
 };
 
-export { listTrees, createTree, getTree, updateTree, deleteTree, duplicateTree, setDefaultTree };
+export { listTrees, createTree, getTree, updateTree, deleteTree, duplicateTree, setDefaultTree, shareTree };

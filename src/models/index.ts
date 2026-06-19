@@ -15,3 +15,4 @@ export { default as Member } from './member.model.ts';
 export { default as MemberRelationType } from './memberRelationType.model.ts';
 export { default as Voice } from './voice.model.ts';
 export { default as CreditTransaction } from './creditTransaction.model.ts';
+export { default as TreeShare } from './treeShare.model.ts';
