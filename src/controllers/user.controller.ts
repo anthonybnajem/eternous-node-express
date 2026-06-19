@@ -99,6 +99,61 @@ const nidVerifySubmitList = catchAsync(async (_req, res: Response): Promise<void
   });
 });
 
+type SessionIdParams = { sessionId: string };
+type MyProfileBody = { fullName?: string; username?: string; phoneNumber?: string; address?: string };
+
+const getMyProfile = catchAsync(async (req, res: Response): Promise<void> => {
+  if (!req.user) throw new Error('Unauthorized');
+  const profile = await userService.getMyProfile(req.user.id);
+  res.status(httpStatus.OK).json(
+    response({
+      message: 'Profile retrieved successfully',
+      status: 'OK',
+      statusCode: httpStatus.OK,
+      data: profile,
+    })
+  );
+});
+
+const updateMyProfile = catchAsync<Record<string, never>, unknown, MyProfileBody>(async (req, res: Response): Promise<void> => {
+  if (!req.user) throw new Error('Unauthorized');
+  const user = await userService.updateMyProfile(req.user.id, req.body);
+  res.status(httpStatus.OK).json(
+    response({
+      message: 'Profile updated successfully',
+      status: 'OK',
+      statusCode: httpStatus.OK,
+      data: { user, creditBalance: user.creditBalance ?? 0 },
+    })
+  );
+});
+
+const revokeMyDevice = catchAsync<SessionIdParams>(async (req, res: Response): Promise<void> => {
+  if (!req.user) throw new Error('Unauthorized');
+  await sessionService.revokeSession(req.params.sessionId, req.user.id);
+  res.status(httpStatus.OK).json(
+    response({
+      message: 'Device revoked successfully',
+      status: 'OK',
+      statusCode: httpStatus.OK,
+      data: {},
+    })
+  );
+});
+
+const revokeAllMyDevices = catchAsync(async (req, res: Response): Promise<void> => {
+  if (!req.user) throw new Error('Unauthorized');
+  await sessionService.revokeAllUserSessions(req.user.id);
+  res.status(httpStatus.OK).json(
+    response({
+      message: 'All devices revoked successfully',
+      status: 'OK',
+      statusCode: httpStatus.OK,
+      data: {},
+    })
+  );
+});
+
 const listMyDevices = catchAsync(async (req, res: Response): Promise<void> => {
   if (!req.user) {
     throw new Error('Unauthorized');
@@ -123,5 +178,7 @@ export default {
   nidVerifyApproval,
   nidVerifyReject,
   nidVerifySubmitList,
-  listMyDevices,
+listMyDevices,
+  revokeMyDevice,
+  revokeAllMyDevices,
 };

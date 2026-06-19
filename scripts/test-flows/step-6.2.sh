@@ -5,7 +5,7 @@ ensure_verified_user_session
 step "GET /users/me/devices"
 api_auth GET /users/me/devices
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-  SESSION_ID="$(extract '.data.attributes[0].id // .data.attributes.devices[0].id // empty')"
+  SESSION_ID="$(extract '.data.attributes.devices[0].id // .data.attributes.devices[0]._id // empty')"
   if [[ -n "$SESSION_ID" ]]; then
     api_auth DELETE "/users/me/devices/${SESSION_ID}"
     pass "revoked session ${SESSION_ID}"
