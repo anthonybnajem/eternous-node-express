@@ -39,6 +39,7 @@ export interface UserAttrs {
   nidNumber?: string;
   nidStatus?: 'unverified' | 'pending' | 'approved' | 'cancelled';
   creditBalance?: number;
+  stripeCustomerId?: string;
   currentSubscription?: Types.ObjectId | null;
   subscriptions?: Types.ObjectId[];
   photo?: UploadedFileInfo[];
@@ -191,6 +192,13 @@ const userSchema = new mongoose.Schema<UserAttrs, UserModel, UserMethods>(
       type: Number,
       default: 0,
       min: 0,
+    },
+    stripeCustomerId: {
+      type: String,
+      required: false,
+      trim: true,
+      default: undefined,
+      index: true,
     },
     lastLogin: {
       type: Date,

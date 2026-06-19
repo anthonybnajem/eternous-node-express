@@ -935,16 +935,16 @@ Script: `scripts/test-flows/step-3.4.sh` — chains API calls; passes `TOKEN`, i
 - [~] `subscription.model.ts` — add `plan` ObjectId ref
 
 ### Services
-- [ ] `billing.service.ts` — get current plan summary (`name`, `$80.00 per month`)
-- [ ] `billing.service.ts` — list payment methods from Stripe Customer
-- [ ] `billing.service.ts` — add payment method (Stripe SetupIntent)
-- [ ] `billing.service.ts` — set default payment method
-- [ ] `billing.service.ts` — billing history (invoices/payments paginated)
+- [x] `billing.service.ts` — get current plan summary (`name`, `$80.00 per month`)
+- [x] `billing.service.ts` — list payment methods from Stripe Customer
+- [x] `billing.service.ts` — add payment method (Stripe SetupIntent)
+- [x] `billing.service.ts` — set default payment method
+- [x] `billing.service.ts` — billing history (invoices/payments paginated)
 - [~] `stripe.service.ts` — extend webhooks: `invoice.paid` → Payment + credits
-- [ ] Stripe Customer: create/link on first subscription
+- [x] `User`: `stripeCustomerId` for Stripe Customer link
 
 ### Controllers
-- [ ] `billing.controller.ts`
+- [x] `billing.controller.ts`
 - [~] `payment.controller.ts` — payment intents exist
 
 ### Routes / APIs
@@ -953,12 +953,12 @@ Script: `scripts/test-flows/step-3.4.sh` — chains API calls; passes `TOKEN`, i
 
 | Method | Path | Access | Status | Notes |
 |--------|------|--------|--------|-------|
-| GET | `/billing/overview` | User | [ ] | Plan + payment method summary |
-| GET | `/billing/payment-methods` | User | [ ] | List own cards |
-| POST | `/billing/payment-methods` | User | [ ] | Add (SetupIntent client secret) |
-| PATCH | `/billing/payment-methods/:id/default` | User | [ ] | Set default |
-| DELETE | `/billing/payment-methods/:id` | User | [ ] | Remove |
-| GET | `/billing/history` | User | [ ] | Paginated invoices/payments |
+| GET | `/billing/overview` | User | [x] | Plan + payment method summary |
+| GET | `/billing/payment-methods` | User | [x] | List own cards |
+| POST | `/billing/payment-methods` | User | [x] | Add (SetupIntent client secret) |
+| PATCH | `/billing/payment-methods/:id/default` | User | [x] | Set default |
+| DELETE | `/billing/payment-methods/:id` | User | [x] | Remove |
+| GET | `/billing/history` | User | [x] | Paginated invoices/payments |
 | POST | `/payments/create-intent` | User | [~] | Own payments |
 | GET | `/payments/:paymentIntentId` | User | [~] | Own payment intent |
 
@@ -968,7 +968,7 @@ Script: `scripts/test-flows/step-3.4.sh` — chains API calls; passes `TOKEN`, i
 |--------|------|--------|--------|-------|
 | POST | `/payments/:paymentIntentId/refund` | Admin | [~] | `auth('manageOrders')` — keep existing path |
 
-#### Step 3.3 — Billing overview, payment methods, history
+#### Step 3.3 — Billing overview, payment methods, history ✅ DONE
 
 **Commit:** `feat(billing): add overview, payment methods, and history`
 
@@ -1916,7 +1916,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **2.4** ✅ | `feat(home): add favorites and recently used members` | `GET /home` → `{ favorites, recentlyUsed }` | `npm run test:flow -- 2.4` |
 | **3.1** ✅ | `feat(subscriptions): add plan credits and idempotent Stripe webhooks` | Plans show `credits`; webhook replay → grant once | `npm run test:flow -- 3.1` |
 | **3.2** ✅ | `feat(credits): add credit balance, ledger, and admin adjust` | `GET /users/me/credits`; admin adjust updates balance | `npm run test:flow -- 3.2` |
-| **3.3** | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
+| **3.3** ✅ | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
 | **3.4** | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
 | **4.1** | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline | `npm run test:flow -- 4.1` |
 | **4.2** | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` | `npm run test:flow -- 4.2` |

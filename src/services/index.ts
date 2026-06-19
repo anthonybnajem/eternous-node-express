@@ -15,4 +15,5 @@ export { default as memberRelationTypeService } from './memberRelationType.servi
 export { default as voiceService } from './voice.service.ts';
 export { default as homeService } from './home.service.ts';
 export { default as creditService } from './credit.service.ts';
+export { default as billingService } from './billing.service.ts';
 export { default as sessionService } from './session.service.ts';

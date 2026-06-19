@@ -6,3 +6,4 @@ export * as termsController from './terms.controller.ts';
 export * as privacyController from './privacy.controller.ts';
 export * as aboutController from './about.controller.ts';
 export * as creditController from './credit.controller.ts';
+export * as billingController from './billing.controller.ts';
