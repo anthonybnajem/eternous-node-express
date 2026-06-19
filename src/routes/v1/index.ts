@@ -12,6 +12,7 @@ import memberRelationTypeRoute from './member-relation-type.routes.ts';
 import homeRoute from './home.routes.ts';
 import billingRoute from './billing.routes.ts';
 import chatRoute from './chat.routes.ts';
+import archiveRoute from './archive.routes.ts';
 import termsRoute from './terms.routes.ts';
 import privacyRoute from './privacy.routes.ts';
 import aboutRoute from './about.routes.ts';
@@ -70,6 +71,10 @@ const defaultRoutes = [
   {
     path: '/chat',
     route: chatRoute,
+  },
+  {
+    path: '/archive',
+    route: archiveRoute,
   },
   {
     path: '/static/terms',

@@ -17,3 +17,4 @@ export { default as Voice } from './voice.model.ts';
 export { default as CreditTransaction } from './creditTransaction.model.ts';
 export { default as TreeShare } from './treeShare.model.ts';
 export { default as NotificationJobLog } from './notificationJobLog.model.ts';
+export { default as Recording } from './recording.model.ts';

@@ -21,4 +21,5 @@ export { default as treeShareService } from './treeShare.service.ts';
 export { default as notificationDispatchService } from './notificationDispatch.service.ts';
 export { default as chatService } from './chat.service.ts';
 export { default as storageService } from './storage.service.ts';
+export { default as archiveService } from './archive.service.ts';
 export { default as sessionService } from './session.service.ts';
