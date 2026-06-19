@@ -4,6 +4,7 @@ import validate from '../../middlewares/validate.ts';
 import userController from '../../controllers/user.controller.ts';
 import { creditController } from '../../controllers/index.ts';
 import settingsController from '../../controllers/settings.controller.ts';
+import securityController from '../../controllers/security.controller.ts';
 import { creditValidation, settingsValidation } from '../../validations/index.ts';
 import userFileUploadMiddleware from '../../middlewares/fileUpload.ts';
 import convertHeicToPngMiddleware from '../../middlewares/converter.ts';
@@ -186,6 +187,15 @@ router.route('/nidVerifySubmitList').get(auth('common'), userController.nidVerif
  *         $ref: '#/components/responses/Unauthorized'
  */
 router.route('/me/devices').get(auth(), userController.listMyDevices);
+router
+  .route('/me/security/2fa/enable')
+  .post(auth(), securityController.enableTwoFactor);
+router
+  .route('/me/security/2fa/verify')
+  .post(auth(), securityController.verifyTwoFactor);
+router
+  .route('/me/security/2fa/disable')
+  .post(auth(), securityController.disableTwoFactor);
 
 router.route('/me/settings').get(auth(), settingsController.getMySettings);
 router
