@@ -10,3 +10,4 @@ export { default as billingValidation } from './billing.validation.ts';
 export { default as notificationValidation } from './notification.validation.ts';
 export { default as settingsValidation } from './settings.validation.ts';
 export { default as notificationCronValidation } from './notificationCron.validation.ts';
+export { default as chatValidation } from './chat.validation.ts';
