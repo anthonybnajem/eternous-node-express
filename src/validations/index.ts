@@ -8,3 +8,4 @@ export { default as voiceValidation } from './voice.validation.ts';
 export { default as creditValidation } from './credit.validation.ts';
 export { default as billingValidation } from './billing.validation.ts';
 export { default as notificationValidation } from './notification.validation.ts';
+export { default as settingsValidation } from './settings.validation.ts';

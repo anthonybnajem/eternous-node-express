@@ -3,7 +3,8 @@ import auth from '../../middlewares/auth.ts';
 import validate from '../../middlewares/validate.ts';
 import userController from '../../controllers/user.controller.ts';
 import { creditController } from '../../controllers/index.ts';
-import { creditValidation } from '../../validations/index.ts';
+import settingsController from '../../controllers/settings.controller.ts';
+import { creditValidation, settingsValidation } from '../../validations/index.ts';
 import userFileUploadMiddleware from '../../middlewares/fileUpload.ts';
 import convertHeicToPngMiddleware from '../../middlewares/converter.ts';
 
@@ -185,6 +186,14 @@ router.route('/nidVerifySubmitList').get(auth('common'), userController.nidVerif
  *         $ref: '#/components/responses/Unauthorized'
  */
 router.route('/me/devices').get(auth(), userController.listMyDevices);
+
+router.route('/me/settings').get(auth(), settingsController.getMySettings);
+router
+  .route('/me/settings')
+  .patch(auth(), validate(settingsValidation.updateSettings), settingsController.updateMySettings);
+router
+  .route('/me/settings/notifications')
+  .patch(auth(), validate(settingsValidation.updateNotificationSettings), settingsController.updateNotificationSettings);
 
 /**
  * @swagger
