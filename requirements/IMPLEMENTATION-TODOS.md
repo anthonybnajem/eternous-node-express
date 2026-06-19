@@ -1904,7 +1904,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | Step | Commit | Quick test | Flow script |
 |------|--------|------------|-------------|
 | **0.2** ✅ | `feat(activity): centralize audit logging for user, subscription, and admin actions` | `GET /activities` (user); `GET /activities/admin?type=admin_action` (admin) |
-| **0.1** | `chore: add migrations and seed member relation types` | `npm run seed:relation-types` → 13 relation types in Mongo | `npm run test:flow -- 0.1` |
+| **0.1** ✅ | `chore: add migrations and seed member relation types` | `npm run seed:relation-types` → 13 relation types in Mongo | `npm run test:flow -- 0.1` |
 | **1.1** ✅ | `feat(models): align Eternous schemas and export all models` | `npm run typecheck`; `GET /activities` → 401 without token |
 | **1.2** ✅ | `feat(auth): create default Settings on user registration` | Register user → `db.settings.findOne({ userId })` exists |
 | **1.3** ✅ | `feat(auth): use Firebase email verification instead of custom OTP` | Unverified email → 400; after Firebase verify → login + Mongo JWT |
@@ -1919,18 +1919,19 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **3.3** ✅ | `feat(billing): add overview, payment methods, and history` | `GET /billing/overview`, `/payment-methods`, `/history` | `npm run test:flow -- 3.3` |
 | **3.4** ✅ | `feat(subscriptions): add upgrade and cancel for own plan` | `POST /subscriptions/upgrade`; `PATCH .../cancel` | `npm run test:flow -- 3.4` |
 | **4.1** ✅ | `feat(notifications): add inbox and tree share accept/decline` | Share tree → inbox → accept/decline | `npm run test:flow -- 4.1` |
-| **4.2** | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` | `npm run test:flow -- 4.2` |
-| **4.3** | `chore(notifications): register cron scheduler and job dedup log` | Server start logs schedulers; dedup on second run | `npm run test:flow -- 4.3` |
-| **4.4** | `feat(notifications): add birthday and anniversary cron jobs` | `test:notification-crons birthday` → notification | `npm run test:flow -- 4.4` |
-| **4.5** | `feat(notifications): add payment and credits-low cron jobs` | Renewal + credits-low crons fire expected types | `npm run test:flow -- 4.5` |
-| **4.6** | `feat(notifications): add monthly backup-ready notification` | `test:notification-crons backup-ready` | `npm run test:flow -- 4.6` |
-| **5.1** | `feat(chat): add ephemeral chat proxy with voice selection` | `POST /chat` → text + audioUrl; no chat DB docs | `npm run test:flow -- 5.1` |
-| **5.2** | `feat(credits): deduct credits atomically on chat` | Balance drops; 0 credits → error | `npm run test:flow -- 5.2` |
-| **5.3** | `feat(archive): add storage usage, recordings list, and download` | `GET /archive/storage`, `/recordings`, download URL | `npm run test:flow -- 5.3` |
-| **6.1** | `feat(security): add two-factor authentication endpoints` | Enable → verify → disable 2FA | `npm run test:flow -- 6.1` |
-| **6.2** | `feat(security): add device list and session revoke` | List devices; revoke one / all | `npm run test:flow -- 6.2` |
-| **6.3** | `feat(admin): add optional dashboard analytics endpoint` | Admin analytics → 200; user → 403 | `npm run test:flow -- 6.3` |
-| **9** | `feat(users): extend profile endpoint with credits and subscription` | `GET /users/me` includes credits + plan | `npm run test:flow -- 9` |
+| **4.2** ✅ | `feat(settings): add notification preferences endpoints` | `GET/PATCH /users/me/settings/notifications` | `npm run test:flow -- 4.2` |
+| **4.3** ✅ | `chore(notifications): register cron scheduler and job dedup log` | Server start logs schedulers; dedup on second run | `npm run test:flow -- 4.3` |
+| **4.4** ✅ | `feat(notifications): add birthday and anniversary cron jobs` | `test:notification-crons birthday` → notification | `npm run test:flow -- 4.4` |
+| **4.5** ✅ | `feat(notifications): add payment and credits-low cron jobs` | Renewal + credits-low crons fire expected types | `npm run test:flow -- 4.5` |
+| **4.6** ✅ | `feat(notifications): add monthly backup-ready notification` | `test:notification-crons backup-ready` | `npm run test:flow -- 4.6` |
+| **5.1** ✅ | `feat(chat): add ephemeral chat proxy with voice selection` | `POST /chat` → text + audioUrl; no chat DB docs | `npm run test:flow -- 5.1` |
+| **5.2** ✅ | `feat(credits): deduct credits atomically on chat` | Balance drops; 0 credits → error | `npm run test:flow -- 5.2` |
+| **5.3** ✅ | `feat(archive): add storage usage, recordings list, and download` | `GET /archive/storage`, `/recordings`, download URL | `npm run test:flow -- 5.3` |
+| **6.1** ✅ | `feat(security): add two-factor authentication endpoints` | Enable → verify → disable 2FA | `npm run test:flow -- 6.1` |
+| **6.2** ✅ | `feat(security): add device list and session revoke` | List devices; revoke one / all | `npm run test:flow -- 6.2` |
+| **6.3** ✅ | `feat(admin): add optional dashboard analytics endpoint` | Admin analytics → 200; user → 403 | `npm run test:flow -- 6.3` |
+| **9** ✅ | `feat(users): extend profile endpoint with credits and subscription` | `GET /users/me` includes credits + plan | `npm run test:flow -- 9` |
+| **15** ✅ | `feat(storage): add upload helper and per-user quota tracking` | `GET /archive/storage` returns usedBytes + quota | `npm run test:flow -- 15` |
 
 **Always before commit:** `npm run typecheck` (and `npm run test` when tests exist for that step).
 
