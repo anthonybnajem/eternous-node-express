@@ -5,11 +5,12 @@ import ApiError from '../utils/ApiError.ts';
 import config from '../config/config.ts';
 import { roleRights, type Permission, type Role } from '../config/roles.ts';
 import { tokenTypes } from '../config/tokens.ts';
-import { Token } from '../models/index.ts';
+import { Token, Session } from '../models/index.ts';
 import User from '../models/user.model.ts';
 import type { AuthTokenPayload } from '../types/auth.ts';
 import type { UserDocument } from '../models/user.model.ts';
 import { syncFirebaseUser, verifyIdToken } from '../services/firebaseAuth.service.ts';
+import { isMongoObjectId } from '../services/session.service.ts';
 
 const extractBearerToken = (req: Request): string | null => {
   const authHeader = req.headers.authorization;
@@ -40,6 +41,17 @@ const verifyLegacyAccessToken = async (token: string): Promise<UserDocument | nu
     }
 
     if (payload.sessionId) {
+      if (isMongoObjectId(payload.sessionId)) {
+        const session = await Session.findOne({
+          _id: payload.sessionId,
+          userId: payload.sub,
+          isActive: true,
+        });
+        if (!session) {
+          return null;
+        }
+      }
+
       const sessionToken = await Token.findOne({
         user: payload.sub,
         sessionId: payload.sessionId,

@@ -2,7 +2,8 @@ import type { Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../utils/catchAsync.ts';
 import * as userService from '../services/user.service.ts';
-import { activityService } from '../services/index.ts';
+import { activityService, sessionService } from '../services/index.ts';
+import response from '../config/response.ts';
 import pick from '../utils/pick.ts';
 
 type UserIdParams = { userId: string };
@@ -98,6 +99,21 @@ const nidVerifySubmitList = catchAsync(async (_req, res: Response): Promise<void
   });
 });
 
+const listMyDevices = catchAsync(async (req, res: Response): Promise<void> => {
+  if (!req.user) {
+    throw new Error('Unauthorized');
+  }
+  const devices = await sessionService.listActiveSessions(req.user.id);
+  res.status(httpStatus.OK).json(
+    response({
+      message: 'Devices retrieved successfully',
+      status: 'OK',
+      statusCode: httpStatus.OK,
+      data: { devices },
+    })
+  );
+});
+
 export default {
   interestList,
   getUsers,
@@ -107,4 +123,5 @@ export default {
   nidVerifyApproval,
   nidVerifyReject,
   nidVerifySubmitList,
+  listMyDevices,
 };

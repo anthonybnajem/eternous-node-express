@@ -3,6 +3,9 @@ import httpStatus from 'http-status';
 import app from '../../src/app.ts';
 import { connectDB, closeDB } from '../../src/config/database.ts';
 import User from '../../src/models/user.model.ts';
+import Session from '../../src/models/session.model.ts';
+import Token from '../../src/models/token.model.ts';
+import { tokenTypes } from '../../src/config/tokens.ts';
 
 const getAuthPayload = (body: Record<string, unknown>) => {
   const data = body.data as {
@@ -29,6 +32,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await User.deleteMany({});
+  await Session.deleteMany({});
+  await Token.deleteMany({});
 });
 
 describe('Auth routes', () => {
@@ -229,6 +234,48 @@ describe('Auth routes', () => {
         .post('/api/v1/auth/login')
         .send({ email: credentials.email, password: 'NewPassword123!' })
         .expect(httpStatus.OK);
+    });
+  });
+
+  describe('POST /api/v1/auth/login sessions', () => {
+    test('should create Session docs and link refresh tokens on login', async () => {
+      const credentials = {
+        fullName: 'Session User',
+        email: 'session@example.com',
+        password: 'Password123!',
+        isEmailVerified: true,
+      };
+
+      await User.create(credentials);
+
+      await request(app)
+        .post('/api/v1/auth/login')
+        .set('User-Agent', 'JestTest/Chrome')
+        .send({ email: credentials.email, password: credentials.password })
+        .expect(httpStatus.OK);
+
+      await request(app)
+        .post('/api/v1/auth/login')
+        .set('User-Agent', 'JestTest/Safari')
+        .send({ email: credentials.email, password: credentials.password })
+        .expect(httpStatus.OK);
+
+      const user = await User.findOne({ email: credentials.email });
+      expect(user).not.toBeNull();
+      if (!user) {
+        throw new Error('Expected user to exist');
+      }
+
+      const sessions = await Session.find({ userId: user.id, isActive: true });
+      expect(sessions).toHaveLength(2);
+
+      const refreshTokens = await Token.find({
+        user: user.id,
+        type: tokenTypes.REFRESH,
+        blacklisted: false,
+      });
+      expect(refreshTokens).toHaveLength(2);
+      expect(refreshTokens.every((doc) => doc.sessionId)).toBe(true);
     });
   });
 });

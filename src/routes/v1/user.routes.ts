@@ -168,6 +168,23 @@ router.route('/nidVerifySubmitList').get(auth('common'), userController.nidVerif
 
 /**
  * @swagger
+ * /v1/users/me/devices:
+ *   get:
+ *     summary: List logged-in devices
+ *     description: Retrieve active login sessions for the authenticated user.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: OK
+ *       "401":
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.route('/me/devices').get(auth(), userController.listMyDevices);
+
+/**
+ * @swagger
  * /v1/users:
  *   get:
  *     summary: Get all users

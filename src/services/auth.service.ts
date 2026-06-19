@@ -1,6 +1,7 @@
 import httpStatus from 'http-status';
 import config from '../config/config.ts';
 import * as tokenService from './token.service.ts';
+import * as sessionService from './session.service.ts';
 import * as userService from './user.service.ts';
 import Token from '../models/token.model.ts';
 import type { UserDocument } from '../models/user.model.ts';
@@ -55,7 +56,12 @@ const logout = async (refreshToken: string): Promise<UserDocument> => {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
   }
 
-  await refreshTokenDoc.deleteOne();
+  if (refreshTokenDoc.sessionId) {
+    await sessionService.revokeSession(refreshTokenDoc.sessionId, refreshTokenDoc.user);
+  } else {
+    await refreshTokenDoc.deleteOne();
+  }
+
   return user;
 };
 

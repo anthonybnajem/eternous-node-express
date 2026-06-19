@@ -10,7 +10,7 @@ export interface TokenAttrs {
   type: TokenType;
   expires: Date;
   blacklisted: boolean;
-  sessionId?: string;
+  sessionId?: Types.ObjectId;
   userAgent?: string;
   ipAddress?: string;
 }
@@ -43,7 +43,8 @@ const tokenSchema = new mongoose.Schema<TokenAttrs>(
       default: false,
     },
     sessionId: {
-      type: String,
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: 'Session',
       required: false,
       index: true,
     },

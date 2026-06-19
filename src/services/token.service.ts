@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 import moment, { type Moment } from 'moment';
-import { randomUUID } from 'crypto';
 import httpStatus from 'http-status';
 import config from '../config/config.ts';
 import * as userService from './user.service.ts';
+import * as sessionService from './session.service.ts';
 import { Token } from '../models/index.ts';
 import type { TokenDocument, TokenType } from '../models/token.model.ts';
 import type { UserDocument } from '../models/user.model.ts';
@@ -37,7 +37,7 @@ const saveToken = async (
   userId: ObjectIdLike,
   expires: Moment,
   type: TokenType,
-  sessionId?: string,
+  sessionId?: ObjectIdLike,
   userAgent?: string,
   ipAddress?: string,
   blacklisted = false
@@ -66,16 +66,37 @@ const verifyToken = async (token: string, type: TokenType): Promise<TokenDocumen
 const generateAuthTokens = async (
   user: UserDocument,
   activityId?: ObjectIdLike,
-  sessionId?: string,
+  sessionId?: ObjectIdLike,
   userAgent?: string,
   ipAddress?: string
 ): Promise<AuthTokens> => {
-  const session = sessionId ?? randomUUID();
+  let resolvedSessionId = sessionId;
+
+  if (resolvedSessionId) {
+    const activeSession = await sessionService.getActiveSession(resolvedSessionId, user.id);
+    if (!activeSession) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+    }
+    await sessionService.touchSession(resolvedSessionId);
+  } else {
+    const session = await sessionService.createLoginSession(user.id, { userAgent, ipAddress });
+    resolvedSessionId = session.id;
+  }
+
+  const sessionIdStr = String(resolvedSessionId);
   const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
   const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'days');
-  const accessToken = generateToken(activityId, user.id, accessTokenExpires, tokenTypes.ACCESS, session);
-  const refreshToken = generateToken(activityId, user.id, refreshTokenExpires, tokenTypes.REFRESH, session);
-  await saveToken(refreshToken, user.id, refreshTokenExpires, tokenTypes.REFRESH, session, userAgent, ipAddress);
+  const accessToken = generateToken(activityId, user.id, accessTokenExpires, tokenTypes.ACCESS, sessionIdStr);
+  const refreshToken = generateToken(activityId, user.id, refreshTokenExpires, tokenTypes.REFRESH, sessionIdStr);
+  await saveToken(
+    refreshToken,
+    user.id,
+    refreshTokenExpires,
+    tokenTypes.REFRESH,
+    resolvedSessionId,
+    userAgent,
+    ipAddress
+  );
 
   return {
     access: {
@@ -109,11 +130,16 @@ const generateVerifyEmailToken = async (user: UserDocument): Promise<string> => 
 
 const revokeRefreshToken = async (refreshToken: string): Promise<TokenDocument> => {
   const tokenDoc = await verifyToken(refreshToken, tokenTypes.REFRESH);
+  if (tokenDoc.sessionId) {
+    await sessionService.revokeSession(tokenDoc.sessionId, tokenDoc.user);
+    return tokenDoc;
+  }
   await tokenDoc.deleteOne();
   return tokenDoc;
 };
 
 const revokeAllUserRefreshTokens = async (userId: ObjectIdLike): Promise<void> => {
+  await sessionService.revokeAllUserSessions(userId);
   await Token.deleteMany({ user: userId, type: tokenTypes.REFRESH, blacklisted: false });
 };
 
@@ -130,8 +156,16 @@ const refreshAuth = async (
       throw new Error('User not found');
     }
 
+    if (refreshTokenDoc.sessionId) {
+      const activeSession = await sessionService.getActiveSession(refreshTokenDoc.sessionId, user.id);
+      if (!activeSession) {
+        throw new Error('Session revoked');
+      }
+    }
+
+    const sessionId = refreshTokenDoc.sessionId;
     await refreshTokenDoc.deleteOne();
-    return generateAuthTokens(user, activityId, refreshTokenDoc.sessionId ?? randomUUID(), userAgent, ipAddress);
+    return generateAuthTokens(user, activityId, sessionId, userAgent, ipAddress);
   } catch (error) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
   }

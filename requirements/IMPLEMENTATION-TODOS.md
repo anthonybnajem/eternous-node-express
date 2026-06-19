@@ -288,7 +288,7 @@ All later API calls
 ### Tokens — always from Mongo
 
 - [x] `token.service.ts` — JWT access + refresh, persisted in Mongo `Token` collection
-- [ ] Wire `Token.sessionId` → Mongo `Session` ObjectId (Step 1.5)
+- [x] Wire `Token.sessionId` → Mongo `Session` ObjectId (Step 1.5)
 - [ ] `auth()` middleware loads user from JWT `sub` — **not** Firebase token verification on each request
 - [ ] Refresh / logout / revoke — operate on Mongo `Token` (+ `Session`), not Firebase sessions
 
@@ -331,13 +331,13 @@ All later API calls
 - [x] `User.firebaseUid` — link to Firebase Auth user
 - [~] `oneTimeCode`, `oneTimeCodeExpiresAt` — **legacy; deprecate** per §0.3 (use Firebase verification)
 - [x] Index: `User.username`; email/firebaseUid already indexed
-- [ ] `Token` — refresh tokens in Mongo (existing); link `sessionId` → `Session` (Step 1.5)
+- [x] `Token` — refresh tokens in Mongo (existing); link `sessionId` → `Session` (Step 1.5)
 
 ### Models
 - [x] `user.model.ts` — username, creditBalance, `isPasswordMatch()`, firebaseUid
 - [x] `settings.model.ts` — wired to signup via `settings.service.ts`
-- [~] `token.model.ts` — sessionId currently string UUID → ObjectId ref Session (Step 1.5)
-- [~] `session.model.ts` — schema exists; wire on login (Step 1.5)
+- [x] `token.model.ts` — `sessionId` ObjectId ref `Session`
+- [x] `session.model.ts` — wired on login via `session.service.ts`
 
 ### Services
 - [x] `firebaseAuth.service.ts` — verify idToken, sync providers, create user, verification link helpers ✅
@@ -348,7 +348,8 @@ All later API calls
 - [x] `auth.service.ts` — block JWT until `email_verified` from Firebase (email provider)
 - [x] `auth.service.ts` — `verifyEmailWithIdToken`, `resendEmailVerification`; legacy OTP kept for migration
 - [x] `settings.service.ts` — `ensureDefaultSettings` on register (email + Firebase)
-- [~] `token.service.ts` — JWT in Mongo `Token`; wire Session on generate (Step 1.5)
+- [x] `session.service.ts` — create session on login; list active devices
+- [x] `token.service.ts` — JWT in Mongo `Token`; Session created/linked on `generateAuthTokens`
 
 ### Controllers
 - [~] `auth.controller.ts` — register, login, logout, refresh, delete-me
@@ -367,8 +368,8 @@ All later API calls
 | POST | `/auth/login` | Public | [~] | `{ idToken }` primary; or `{ email, password }` → Mongo verify → Mongo JWT |
 | POST | `/auth/verify-email` | Public | [~] | `{ idToken }` after Firebase email verify — not numeric OTP |
 | POST | `/auth/resend-verification` | Public | [x] | Firebase resend (replaces `/auth/resend-otp`) |
-| POST | `/auth/refresh-tokens` | Public | [~] | Refresh token from Mongo `Token` |
-| POST | `/auth/logout` | User | [~] | Blacklist Mongo refresh `Token` |
+| POST | `/auth/refresh-tokens` | Public | [x] | Refresh token from Mongo `Token`; rotates within same `Session` |
+| POST | `/auth/logout` | User | [x] | Revokes Mongo refresh `Token` + `Session` |
 | POST | `/auth/forgot-password` | Public | [~] | Firebase password reset (client or proxy) |
 | POST | `/auth/reset-password` | Public | [~] | Firebase oobCode flow / client-handled |
 | POST | `/auth/change-password` | User | [x] | Dual: Firebase `updateUser` + Mongo bcrypt; revokes all refresh tokens |
@@ -462,12 +463,15 @@ curl -X POST http://localhost:3000/api/v1/auth/change-password \
 **Flow test:** `npm run test:flow -- 1.4`  
 Script: `scripts/test-flows/step-1.4.sh` — chains API calls; passes `TOKEN`, ids from prior responses (needs `jq`, server running).
 
-#### Step 1.5 — Session on login + Mongo tokens
+#### Step 1.5 — Session on login + Mongo tokens ✅ DONE
 
 **Commit:** `feat(auth): track login sessions and link refresh tokens in Mongo`
 
 **Test:**
 ```bash
+npm run typecheck
+npm test -- tests/integration/auth.test.ts
+
 # Login with idToken or email+password twice (different User-Agent)
 curl -X POST http://localhost:3000/api/v1/auth/login ... -H "User-Agent: Chrome/Mac"
 # Mongo: db.sessions.find({ userId }) → 2 active sessions
@@ -477,7 +481,8 @@ curl -X POST http://localhost:3000/api/v1/auth/refresh-tokens \
   -d '{"refreshToken":"<refresh>"}'
 # → new access token; validated against Mongo Token doc
 
-# GET /users/me/devices (when built) lists both sessions
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/v1/users/me/devices
+# → lists active sessions (devices)
 ```
 
 **Flow test:** `npm run test:flow -- 1.5`  
@@ -1092,20 +1097,20 @@ Script: `scripts/test-flows/step-4.2.sh` — chains API calls; passes `TOKEN`, i
 
 ### DB
 - [~] `Settings.twoFactorEnabled`, `Settings.verified`
-- [~] `Session` — deviceName, deviceType, userAgent, ipAddress, isActive, revokedAt
-- [ ] `Token.sessionId` → change to ObjectId ref Session (currently string UUID)
+- [x] `Session` — deviceName, deviceType, userAgent, ipAddress, isActive, revokedAt; wired on login
+- [x] `Token.sessionId` → ObjectId ref Session
 
 ### Services
-- [ ] `session.service.ts` — create session on login/register
-- [ ] `session.service.ts` — list active devices for user
-- [ ] `session.service.ts` — revoke one session / revoke all
+- [x] `session.service.ts` — create session on login/register
+- [x] `session.service.ts` — list active devices for user
+- [~] `session.service.ts` — revoke one session / revoke all (service ready; DELETE routes in Step 6.2)
 - [ ] `twoFactor.service.ts` — enable/disable 2FA (TOTP or email OTP stub)
-- [ ] `token.service.ts` — link refresh token to Session document
+- [x] `token.service.ts` — link refresh token to Session document
 
 ### Routes / APIs
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| GET | `/users/me/devices` | [ ] | Logged-in devices list |
+| GET | `/users/me/devices` | [x] | Logged-in devices list |
 | DELETE | `/users/me/devices/:sessionId` | [ ] | Logout one device |
 | DELETE | `/users/me/devices` | [ ] | Logout all |
 | POST | `/users/me/security/2fa/enable` | [ ] | |
@@ -1683,7 +1688,7 @@ Phase 6 — Security & polish
 - [ ] `voice.service.ts`
 - [ ] `chat.service.ts`
 - [x] `settings.service.ts`
-- [ ] `session.service.ts`
+- [x] `session.service.ts`
 - [ ] `twoFactor.service.ts`
 - [ ] `credit.service.ts`
 - [ ] `billing.service.ts`
@@ -1788,7 +1793,7 @@ CREDITS_LOW_THRESHOLD=10
 |------|--------|
 | Firebase auth sync | [~] Partial — target §0.3 (all providers + verification) |
 | Mongo bcrypt passwords | [x] Dual Firebase sync on register + change-password (`applyPasswordChange`) |
-| JWT / API tokens | [~] Mongo `Token` — Session link pending (Step 1.5) |
+| JWT / API tokens | [x] Mongo `Token` linked to `Session` on login/refresh (Step 1.5) |
 | Stripe checkout + webhooks | [~] Subscription sync only |
 | SubscriptionPlan CRUD | [~] On `/subscriptions/price-plans` + `manageUsers` |
 | Auth / roles / routes | [x] **Frozen** — no code or flow refactor (Project rules) |
@@ -1895,7 +1900,7 @@ Paste tests in terminal or chat. Replace `<access_token>`, ids, and passwords. *
 | **1.2** ✅ | `feat(auth): create default Settings on user registration` | Register user → `db.settings.findOne({ userId })` exists |
 | **1.3** ✅ | `feat(auth): use Firebase email verification instead of custom OTP` | Unverified email → 400; after Firebase verify → login + Mongo JWT |
 | **1.4** ✅ | `feat(auth): sync encrypted Mongo passwords with Firebase on register and change-password` | bcrypt in Mongo; change-password updates Firebase + Mongo; refresh tokens revoked | `npm run test:flow -- 1.4` |
-| **1.5** | `feat(auth): track login sessions and link refresh tokens in Mongo` | Login twice → sessions + Token docs; refresh from Mongo | `npm run test:flow -- 1.5` |
+| **1.5** ✅ | `feat(auth): track login sessions and link refresh tokens in Mongo` | Login twice → sessions + Token docs; refresh from Mongo; GET devices | `npm run test:flow -- 1.5` |
 | **2.1** | `feat(trees): add tree CRUD, duplicate, and default tree` | CRUD `/trees`; one `isDefault` per user | `npm run test:flow -- 2.1` |
 | **2.2** | `feat(members): add member CRUD and relation type list` | `GET /member-relation-types`; CRUD members in tree | `npm run test:flow -- 2.2` |
 | **2.3** | `feat(voices): add voice upload, list, and default selection` | Upload voice; `PATCH .../default` updates member | `npm run test:flow -- 2.3` |
