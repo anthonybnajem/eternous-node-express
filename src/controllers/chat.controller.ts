@@ -25,7 +25,7 @@ const sendChat = catchAsync<EmptyParams, unknown, ChatBody, EmptyQuery>(async (r
     message: req.body.message,
     voiceId: req.body.voiceId,
     versionNumber: req.body.versionNumber,
-    deductCredits: false,
+    deductCredits: true,
   });
 
   res.status(httpStatus.OK).json(
