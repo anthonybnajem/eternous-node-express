@@ -11,11 +11,12 @@ import memberRoute from './member.routes.ts';
 import memberRelationTypeRoute from './member-relation-type.routes.ts';
 import homeRoute from './home.routes.ts';
 import billingRoute from './billing.routes.ts';
-import chatRoute from './chat.routes.ts';
 import archiveRoute from './archive.routes.ts';
+import chatRoute from './chat.routes.ts';
 import termsRoute from './terms.routes.ts';
 import privacyRoute from './privacy.routes.ts';
 import aboutRoute from './about.routes.ts';
+import adminRoute from './admin.routes.ts';
 
 const router = express.Router();
 
@@ -83,6 +84,10 @@ const defaultRoutes = [
   {
     path: '/static/privacy',
     route: privacyRoute,
+  },
+  {
+    path: '/admin',
+    route: adminRoute,
   },
   {
     path: '/static/about',

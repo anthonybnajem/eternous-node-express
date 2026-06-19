@@ -23,4 +23,5 @@ export { default as chatService } from './chat.service.ts';
 export { default as storageService } from './storage.service.ts';
 export { default as archiveService } from './archive.service.ts';
 export { default as twoFactorService } from './twoFactor.service.ts';
+export { default as adminAnalyticsService } from './adminAnalytics.service.ts';
 export { default as sessionService } from './session.service.ts';
